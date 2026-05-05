@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
       setLoading(false)
     })
 
-    // ✅ FIXED: Correct destructuring of the session data
+    // ✅ FIXED: Correct destructuring for Supabase session
     supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setRole(session ? 'student' : null)
