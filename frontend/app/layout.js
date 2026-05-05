@@ -2,7 +2,7 @@ import { Inter } from 'next/font/google'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider } from '@/context/CartContext'
 import { Toaster } from 'react-hot-toast'
-import './globals.css'
+import '@/styles/globals.css'  // ← Fixed path
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 
@@ -31,4 +31,4 @@ export default function RootLayout({ children }) {
       </body>
     </html>
   )
-}
+                                                         }
