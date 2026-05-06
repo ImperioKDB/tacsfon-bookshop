@@ -9,18 +9,44 @@ export function AuthProvider({ children }) {
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
-      // Phase 2: fetch role from profiles table here
-      setRole(session ? 'student' : null) 
-      setLoading(false)
-    })
+  // Fetch role from profiles table
+  async function fetchRole(userId) {
+    if (!userId) return 'student'
+    const { data, error } = await supabaseBrowser
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single()
+    
+    if (error || !data?.role) return 'student' // fail-safe default
+    return data.role
+  }
 
-    // ✅ FIXED: Correct destructuring for Supabase session
-    supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setRole(session ? 'student' : null)
+  useEffect(() => {
+    const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
+      async (event, session) => {
+        const currentUser = session?.user ?? null
+        setUser(currentUser)
+        
+        if (currentUser) {
+          const userRole = await fetchRole(currentUser.id)
+          setRole(userRole)
+        } else {
+          setRole(null)
+        }
+        setLoading(false)
+      }
+    )
+
+    // Initial session check
+    supabaseBrowser.auth.getSession().then(async ({ data: { session } }) => {
+      const currentUser = session?.user ?? null
+      setUser(currentUser)
+      
+      if (currentUser) {
+        const userRole = await fetchRole(currentUser.id)
+        setRole(userRole)
+      }
       setLoading(false)
     })
 
