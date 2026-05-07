@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -17,20 +17,18 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  
+
   const router = useRouter()
   const { user } = useAuth()
 
-  // Redirect if already logged in
-  if (user) {
-    router.push('/products')
-    return null
-  }
+  // Fixed: redirect moved into useEffect — never call router.push in render body
+  useEffect(() => {
+    if (user) router.push('/products')
+  }, [user, router])
 
   async function handleSubmit(e) {
     e.preventDefault()
-    
-    // Validation
+
     if (!fullName || !email || !password || !confirmPassword) {
       toastError('Please fill in all fields')
       return
@@ -47,7 +45,8 @@ export default function SignupPage() {
       toastError('Password must be at least 8 characters')
       return
     }
-    if (password !== confirmPassword) {      toastError('Passwords do not match')
+    if (password !== confirmPassword) {
+      toastError('Passwords do not match')
       return
     }
 
@@ -66,7 +65,6 @@ export default function SignupPage() {
   async function handleGoogleSignup() {
     try {
       await signInWithGoogle()
-      // OAuth redirects to /auth/callback
     } catch (error) {
       toastError(getAuthErrorMessage(error))
     }
@@ -75,13 +73,37 @@ export default function SignupPage() {
   return (
     <div className="page-enter min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
+
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block text-2xl font-bold text-primary mb-4">
             TACSFON Bookshop
           </Link>
           <h1 className="text-2xl font-bold text-text-primary">Create an account</h1>
-          <p className="text-text-secondary mt-1">Join UNIBEN's campus bookshop</p>
+          <p className="text-text-secondary mt-1">Join UNIBEN&apos;s campus bookshop</p>
+        </div>
+
+        {/* Google signup */}
+        <button
+          type="button"
+          onClick={handleGoogleSignup}
+          className="w-full flex items-center justify-center gap-3 border border-border rounded-xl py-3 px-4 
+                     text-text-primary font-medium hover:bg-gray-50 transition-all duration-200 mb-6 min-h-[44px]"
+        >
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        {/* Divider */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-text-secondary">or sign up with email</span>
+          <div className="flex-1 h-px bg-border" />
         </div>
 
         {/* Form */}
@@ -95,73 +117,90 @@ export default function SignupPage() {
             autoComplete="name"
             required
           />
-          
-          <Input            label="Email"
+          <Input
+            label="Email Address"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="student@uniben.edu"
+            placeholder="you@example.com"
             autoComplete="email"
             required
           />
-          
-          <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            showToggle
-            autoComplete="new-password"
-            required
-          />
+          <div className="relative">
+            <Input
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Min. 8 characters"
+              autoComplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-9 text-text-secondary hover:text-text-primary transition-colors"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              )}
+            </button>
+          </div>
+          <div className="relative">
+            <Input
+              label="Confirm Password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Repeat your password"
+              autoComplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-9 text-text-secondary hover:text-text-primary transition-colors"
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            >
+              {showConfirmPassword ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                  <line x1="1" y1="1" x2="23" y2="23"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              )}
+            </button>
+          </div>
 
-          <Input
-            label="Confirm Password"
-            type={showConfirmPassword ? 'text' : 'password'}
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="••••••••"
-            showToggle
-            autoComplete="new-password"
-            required
-          />
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? <Spinner size="sm" color="white" /> : 'Sign Up'}
+          <Button type="submit" className="btn-primary w-full" disabled={loading}>
+            {loading ? <Spinner size="sm" /> : 'Create Account'}
           </Button>
         </form>
 
-        {/* Divider */}
-        <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-text-secondary uppercase tracking-wide">or</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-
-        {/* Google OAuth */}
-        <button
-          type="button"
-          onClick={handleGoogleSignup}
-          disabled={loading}
-          className="w-full min-h-[44px] flex items-center justify-center gap-3 rounded-full px-6 py-3 border border-border bg-white text-text-primary font-medium hover:bg-gray-50 transition-all disabled:opacity-50"
-        >          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-          Continue with Google
-        </button>
-
-        {/* Login link */}
+        {/* Footer link */}
         <p className="text-center text-sm text-text-secondary mt-6">
           Already have an account?{' '}
-          <Link href="/login" className="text-primary font-medium hover:underline">
+          <Link href="/login" className="text-primary font-medium hover:underline underline-offset-4">
             Sign in
           </Link>
         </p>
+
       </div>
     </div>
   )
-  }
+            }
