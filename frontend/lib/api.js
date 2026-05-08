@@ -183,13 +183,6 @@ export const adminApi = {
   // Stats
   getStats:    ()        => authGet('/api/admin/stats'),
 }
-export const productsApi = {
-  getAll:  (params) => get('/api/products', params),
-  getById: (id)     => get(`/api/products/${id}`),
-}
-
-// ADD THIS BELOW productsApi ↓
 export const categoriesApi = {
   getAll: () => get('/api/categories'),
 }
-
