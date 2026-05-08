@@ -225,7 +225,7 @@ export default function Home() {
             Reach our admin directly for order issues, custom requests, or general enquiries.
           </p>
           <a
-            href="https://wa.me/2340000000000"
+            href="https://wa.me/2348087672926"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-white text-primary font-bold
