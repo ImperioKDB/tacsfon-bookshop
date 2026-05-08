@@ -8,40 +8,45 @@
   }
   body {
     @apply bg-white text-text-primary antialiased;
-    font-family: var(--font-inter), system-ui, sans-serif;
+    font-family: var(--font-dm-sans), system-ui, sans-serif;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white rounded-full px-6 py-3 font-medium 
-           transition-all duration-200 hover:bg-primary/90 hover:translate-y-[-2px] hover:shadow-md 
-           disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center;
+    @apply bg-primary text-white rounded-full px-6 py-3 font-semibold
+           transition-all duration-200 hover:bg-primary/90 hover:translate-y-[-2px] hover:shadow-md
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none
+           min-h-[44px] flex items-center justify-center gap-2;
   }
   .btn-secondary {
-    @apply border border-primary text-primary rounded-full px-6 py-3 font-medium bg-transparent
-           transition-all duration-200 hover:bg-primary-light hover:translate-y-[-2px] 
-           disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center;
+    @apply border-2 border-primary text-primary rounded-full px-6 py-3 font-semibold bg-transparent
+           transition-all duration-200 hover:bg-primary-muted hover:translate-y-[-2px]
+           disabled:opacity-50 disabled:cursor-not-allowed
+           min-h-[44px] flex items-center justify-center gap-2;
   }
   .input-field {
-    @apply w-full px-4 py-3 rounded-xl border border-border bg-white 
-           focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary 
-           transition-all duration-200 min-h-[44px];
+    @apply w-full px-4 py-3 rounded-xl border border-border bg-white
+           text-text-primary placeholder:text-text-secondary/60
+           focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary
+           transition-all duration-200 min-h-[48px] text-[15px];
   }
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-border/50 p-4 
+    @apply bg-white rounded-2xl shadow-sm border border-border/60 p-4
            transition-all duration-200 hover:translate-y-[-2px] hover:shadow-md;
+  }
+  .auth-card {
+    @apply bg-white rounded-3xl shadow-lg border border-border/40 p-6 md:p-8;
   }
 }
 
 @layer utilities {
   .skeleton {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+    background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
     background-size: 200% 100%;
-    animation: shimmer 1.4s ease-in-out infinite;
+    animation: shimmer 1.5s ease-in-out infinite;
   }
 
-  /* Hide horizontal scrollbar on category chips row */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -49,9 +54,16 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Subtle dot grid pattern for hero */
+  .hero-pattern {
+    background-color: #1a5c38;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
 }
 
-/* ── Animations ─────────────────────────────────────────────────────────── */
+/* ── Animations ──────────────────────────────────────────────────────────── */
 
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
@@ -69,16 +81,16 @@
 }
 
 @keyframes floatUp {
-  from { transform: translateY(20px); opacity: 0; }
+  from { transform: translateY(24px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
 
 .page-enter {
-  animation: fadeIn 200ms ease-in-out;
+  animation: fadeIn 220ms ease-in-out;
 }
 
 .animate-fade-in {
-  animation: fadeIn 150ms ease-in-out;
+  animation: fadeIn 160ms ease-in-out;
 }
 
 .animate-slide-up {
@@ -87,11 +99,11 @@
 
 /* Product card stagger float (homepage wow effect — Phase 9) */
 .float-up {
-  animation: floatUp 400ms ease-out both;
+  animation: floatUp 420ms ease-out both;
 }
-.float-up-1 { animation-delay: 0.1s; }
-.float-up-2 { animation-delay: 0.2s; }
-.float-up-3 { animation-delay: 0.3s; }
-.float-up-4 { animation-delay: 0.4s; }
-.float-up-5 { animation-delay: 0.5s; }
-.float-up-6 { animation-delay: 0.6s; }
+.float-up-1 { animation-delay: 0.05s; }
+.float-up-2 { animation-delay: 0.1s; }
+.float-up-3 { animation-delay: 0.15s; }
+.float-up-4 { animation-delay: 0.2s; }
+.float-up-5 { animation-delay: 0.25s; }
+.float-up-6 { animation-delay: 0.3s; }
