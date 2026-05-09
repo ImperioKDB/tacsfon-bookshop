@@ -17,7 +17,8 @@ export function useNotifications() {
     try {
       const data = await notificationsApi.getAll()
       setNotifications(data)
-      setUnreadCount(data.filter(n => !n.read).length)
+      // FIX: DB column is `is_read`, not `read`
+      setUnreadCount(data.filter(n => !n.is_read).length)
     } catch {
       // Silently fail — don't show error toasts for background polling
     }
@@ -39,9 +40,9 @@ export function useNotifications() {
   }, [user, fetchNotifications])
 
   async function markRead(id) {
-    // Optimistic update
+    // Optimistic update — FIX: use is_read
     setNotifications(prev =>
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
+      prev.map(n => n.id === id ? { ...n, is_read: true } : n)
     )
     setUnreadCount(prev => Math.max(0, prev - 1))
     try {
@@ -53,8 +54,8 @@ export function useNotifications() {
   }
 
   async function markAllRead() {
-    // Optimistic update
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    // Optimistic update — FIX: use is_read
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
     setUnreadCount(0)
     try {
       await notificationsApi.markAllRead()
@@ -65,4 +66,3 @@ export function useNotifications() {
 
   return { notifications, unreadCount, loading, markRead, markAllRead, refresh: fetchNotifications }
 }
-
