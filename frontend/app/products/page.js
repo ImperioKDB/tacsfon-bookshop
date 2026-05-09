@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { productsApi, categoriesApi } from '@/lib/api'
 import ProductGrid from '@/components/products/ProductGrid'
 import CategoryFilter from '@/components/products/CategoryFilter'
@@ -9,13 +10,19 @@ import { toastError } from '@/components/ui/Toast'
 const LIMIT = 12
 
 export default function ProductsPage() {
+  const searchParams = useSearchParams()
+  // FIX: read ?category= from URL on mount so homepage chips pre-select the right category.
+  // The value is already decoded by useSearchParams (no need for decodeURIComponent).
+  const categoryFromUrl = searchParams.get('category') ?? ''
+
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('')
+  // Initialise selectedCategory from URL param (supports homepage chip → products page link)
+  const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
 
@@ -28,9 +35,22 @@ export default function ProductsPage() {
   // Fetch categories once on mount
   useEffect(() => {
     categoriesApi.getAll()
-      .then(data => setCategories(data?.categories ?? data ?? []))
+      .then(data => {
+        const cats = data?.categories ?? data ?? []
+        setCategories(cats)
+
+        // FIX: if the URL had a category name (from homepage chip), resolve it to
+        // the matching category id so CategoryFilter highlights the correct pill.
+        if (categoryFromUrl) {
+          const match = cats.find(
+            c => c.name.toLowerCase() === categoryFromUrl.toLowerCase()
+          )
+          if (match) setSelectedCategory(match.id)
+        }
+      })
       .catch(() => {}) // silently fail — filter just won't appear
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally run once; categoryFromUrl is stable on mount
 
   // Fetch products whenever search or category changes
   const fetchProducts = useCallback(async () => {
@@ -140,4 +160,4 @@ export default function ProductsPage() {
       </div>
     </div>
   )
-            }
+}
