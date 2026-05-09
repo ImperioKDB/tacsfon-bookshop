@@ -12,16 +12,32 @@ function ProductCardSkeleton() {
   )
 }
 
+// FIX: category `name` values now exactly match what the DB has in categories.name.
+// The products page passes `category` as a query param to the backend, which
+// filters by name (case-insensitive). Using the exact DB name avoids mismatches.
+const CATEGORIES = [
+  { label: 'Exercise Books',    emoji: '📒' },
+  { label: 'Pens & Pencils',    emoji: '🖊️' },
+  { label: 'Files & Folders',   emoji: '🗂️' },
+  { label: 'Rulers & Geometry', emoji: '📐' },
+  { label: 'Printing Paper',    emoji: '🖨️' },
+  { label: 'Calculators',       emoji: '🔢' },
+  { label: 'Bibles & Devotionals', emoji: '📖' },
+  { label: 'Envelopes',         emoji: '✉️' },
+  { label: 'ID Tags',           emoji: '🪪' },
+  { label: 'Other',             emoji: '📦' },
+]
+
 function CategoryChip({ label, emoji }) {
   return (
     <Link
-      href={`/products?category=${label.toLowerCase()}`}
+      href={`/products?category=${encodeURIComponent(label)}`}
       className="flex flex-col items-center gap-2 py-4 px-3 bg-white rounded-2xl border border-border/70
                  hover:border-primary hover:bg-primary-muted transition-all duration-200
                  hover:translate-y-[-2px] hover:shadow-sm min-w-[80px]"
     >
       <span className="text-2xl leading-none">{emoji}</span>
-      <span className="text-xs font-semibold text-text-secondary">{label}</span>
+      <span className="text-xs font-semibold text-text-secondary text-center leading-tight">{label}</span>
     </Link>
   )
 }
@@ -156,13 +172,9 @@ export default function Home() {
           <h2 className="text-2xl font-bold text-text-primary mb-1">Shop by Category</h2>
           <p className="text-sm text-text-secondary mb-7">Find exactly what you need</p>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            <CategoryChip label="Notebooks" emoji="📒" />
-            <CategoryChip label="Pens"      emoji="🖊️" />
-            <CategoryChip label="Textbooks" emoji="📚" />
-            <CategoryChip label="Files"     emoji="🗂️" />
-            <CategoryChip label="Geometry"  emoji="📐" />
-            <CategoryChip label="Art"       emoji="🎨" />
-            <CategoryChip label="Others"    emoji="📦" />
+            {CATEGORIES.map(({ label, emoji }) => (
+              <CategoryChip key={label} label={label} emoji={emoji} />
+            ))}
           </div>
         </div>
       </section>
@@ -240,4 +252,5 @@ export default function Home() {
 
     </div>
   )
-    }
+}
+
