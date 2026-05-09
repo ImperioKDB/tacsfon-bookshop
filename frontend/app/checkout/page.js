@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/hooks/useAuth'
 import { ordersApi } from '@/lib/api'
-import Spinner from '@/components/ui/Spinner'
+import Spinner from '@/components/ui/spinner'
 import EmptyState from '@/components/ui/EmptyState'
 
 function formatPrice(amount) {
