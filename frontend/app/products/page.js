@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { productsApi, categoriesApi } from '@/lib/api'
 import ProductGrid from '@/components/products/ProductGrid'
@@ -9,10 +9,8 @@ import { toastError } from '@/components/ui/Toast'
 
 const LIMIT = 12
 
-export default function ProductsPage() {
+function ProductsContent() {
   const searchParams = useSearchParams()
-  // FIX: read ?category= from URL on mount so homepage chips pre-select the right category.
-  // The value is already decoded by useSearchParams (no need for decodeURIComponent).
   const categoryFromUrl = searchParams.get('category') ?? ''
 
   const [products, setProducts] = useState([])
@@ -21,7 +19,6 @@ export default function ProductsPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  // Initialise selectedCategory from URL param (supports homepage chip → products page link)
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
@@ -39,8 +36,8 @@ export default function ProductsPage() {
         const cats = data?.categories ?? data ?? []
         setCategories(cats)
 
-        // FIX: if the URL had a category name (from homepage chip), resolve it to
-        // the matching category id so CategoryFilter highlights the correct pill.
+        // If the URL had a category name (from homepage chip), resolve it to the
+        // matching category id so CategoryFilter highlights the correct pill.
         if (categoryFromUrl) {
           const match = cats.find(
             c => c.name.toLowerCase() === categoryFromUrl.toLowerCase()
@@ -48,7 +45,7 @@ export default function ProductsPage() {
           if (match) setSelectedCategory(match.id)
         }
       })
-      .catch(() => {}) // silently fail — filter just won't appear
+      .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // intentionally run once; categoryFromUrl is stable on mount
 
@@ -78,7 +75,6 @@ export default function ProductsPage() {
     fetchProducts()
   }, [fetchProducts])
 
-  // Load next page and append
   async function loadMore() {
     const nextPage = page + 1
     setLoadingMore(true)
@@ -108,7 +104,6 @@ export default function ProductsPage() {
   return (
     <div className="page-enter min-h-screen bg-gray-50">
 
-      {/* Page header + search */}
       <div className="bg-white border-b border-border px-4 md:px-8 py-6">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold text-text-primary mb-4">Browse Products</h1>
@@ -118,7 +113,6 @@ export default function ProductsPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
 
-        {/* Category filter */}
         {categories.length > 0 && (
           <div className="mb-6">
             <CategoryFilter
@@ -129,7 +123,6 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Result count */}
         {!loading && products.length > 0 && (
           <p className="text-sm text-text-secondary mb-4">
             {products.length} product{products.length !== 1 ? 's' : ''}
@@ -137,14 +130,12 @@ export default function ProductsPage() {
           </p>
         )}
 
-        {/* Grid */}
         <ProductGrid
           products={products}
           loading={loading}
           loadingMore={loadingMore}
         />
 
-        {/* Load more button */}
         {!loading && hasMore && (
           <div className="text-center mt-8">
             <button
@@ -159,5 +150,35 @@ export default function ProductsPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="page-enter min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-border px-4 md:px-8 py-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="skeleton h-8 w-48 mb-4 rounded" />
+            <div className="skeleton h-12 w-full rounded-xl" />
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="card">
+                <div className="skeleton h-40 w-full rounded-xl mb-3" />
+                <div className="skeleton h-4 w-1/3 mb-2 rounded-full" />
+                <div className="skeleton h-4 w-3/4 mb-1 rounded" />
+                <div className="skeleton h-4 w-1/2 mb-3 rounded" />
+                <div className="skeleton h-10 w-full rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   )
 }
