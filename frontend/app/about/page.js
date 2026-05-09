@@ -17,7 +17,7 @@ const VALUES = [
   {
     emoji: '🤝',
     title: 'Trustworthy',
-    description: 'We are the official bookshop of the Theatre and Communication Arts Students Forum of Nigeria. Your orders are in safe hands.',
+    description: 'We are the official bookshop of the The Apostolic Church Students Fellowship of Nigeria. Your orders are in safe hands.',
   },
   {
     emoji: '⚡',
@@ -48,8 +48,8 @@ export default function AboutPage() {
             About TACSFON Bookshop
           </h1>
           <p className="text-white/75 text-base md:text-lg leading-relaxed max-w-2xl mx-auto">
-            We&apos;re the official bookshop of the Theatre and Communication Arts Students
-            Forum of Nigeria, University of Benin — bringing campus essentials directly to your hostel.
+            We&apos;re the official bookshop of the The Apostolic Church Students
+            Fellowship of Nigeria, University of Benin — bringing campus essentials directly to your hostel.
           </p>
         </div>
         <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
@@ -114,7 +114,7 @@ export default function AboutPage() {
           <div className="space-y-4">
             {[
               { icon: '🏠', title: 'Hostel Delivery', desc: 'We deliver directly to your hostel room. Provide your hostel name and room number at checkout.' },
-              { icon: '⏱️', title: 'Delivery Time', desc: 'Most orders are delivered within 24 hours of payment confirmation. Weekends may take slightly longer.' },
+              { icon: '⏱️', title: 'Delivery Time', desc: 'Most orders are delivered within 24 hours of payment confirmation. Monday to Saturday' },
               { icon: '📦', title: 'Order Tracking', desc: 'Track your order status in real time from the My Orders page — from placement to delivery.' },
               { icon: '💳', title: 'Payment', desc: 'We use secure bank transfer. You\'ll get a unique reference code to use as your transfer narration.' },
             ].map(({ icon, title, desc }) => (
