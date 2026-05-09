@@ -20,9 +20,9 @@ export default function Footer() {
         </div>
         <div>
           <h4 className="font-semibold text-text-primary mb-3">Contact</h4>
-          <p className="text-text-secondary mb-2">📞 WhatsApp: +234 800 000 0000</p>
+          <p className="text-text-secondary mb-2">📞 WhatsApp: +234 808 767 2926</p>
           <a 
-            href="https://wa.me/2348000000000" 
+            href="https://wa.me/2348087672926" 
             target="_blank" 
             rel="noopener noreferrer"
             className="inline-block mt-2 text-primary font-medium hover:underline min-h-[44px] flex items-center"
