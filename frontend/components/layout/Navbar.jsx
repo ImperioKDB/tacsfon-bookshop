@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
 import { supabaseBrowser } from '@/lib/supabase'
+import NotificationBell from '@/components/notifications/NotificationBell'
 import toast from 'react-hot-toast'
 
 function LogoMark() {
@@ -38,13 +39,14 @@ function CartIcon({ size = 18 }) {
 }
 
 export default function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen,    setMenuOpen]    = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
   const router = useRouter()
   const { user, role, loading } = useAuth()
   const { cartCount } = useCart()
 
+  // Close profile dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e) {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -54,6 +56,11 @@ export default function Navbar() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [router])
 
   async function handleLogout() {
     try {
@@ -86,7 +93,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-20
                       flex items-center justify-between">
 
-        {/* Logo — mark + wordmark */}
+        {/* ── Logo ──────────────────────────────────────────────────────────── */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <LogoMark />
           <span className="text-[17px] font-extrabold text-primary tracking-tight">
@@ -94,8 +101,10 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Desktop Nav */}
+        {/* ── Desktop nav ───────────────────────────────────────────────────── */}
         <div className="hidden md:flex items-center gap-6">
+
+          {/* Nav links */}
           {navLinks.map(link => (
             <Link key={link.href} href={link.href}
                   className="text-text-secondary hover:text-primary transition-colors
@@ -112,6 +121,10 @@ export default function Navbar() {
             </Link>
           )}
 
+          {/* Notification bell — logged-in users only */}
+          {user && <NotificationBell />}
+
+          {/* Cart — logged-in users only */}
           {user && (
             <Link href="/cart"
                   className="relative min-h-[44px] flex items-center gap-1.5
@@ -129,6 +142,7 @@ export default function Navbar() {
             </Link>
           )}
 
+          {/* Profile dropdown / auth buttons */}
           {loading ? (
             <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
           ) : user ? (
@@ -188,8 +202,13 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile: cart + hamburger */}
-        <div className="flex md:hidden items-center gap-2">
+        {/* ── Mobile: bell + cart + hamburger ───────────────────────────────── */}
+        <div className="flex md:hidden items-center gap-1">
+
+          {/* Notification bell — mobile */}
+          {user && <NotificationBell />}
+
+          {/* Cart — mobile */}
           {user && (
             <Link href="/cart"
                   className="relative min-h-[44px] min-w-[44px] flex items-center
@@ -203,6 +222,8 @@ export default function Navbar() {
               )}
             </Link>
           )}
+
+          {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
@@ -223,10 +244,11 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* ── Mobile menu ───────────────────────────────────────────────────────── */}
       {menuOpen && (
         <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b
                         border-border shadow-lg p-4 space-y-1 animate-fade-in">
+
           {navLinks.map(link => (
             <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)}
                   className="block px-3 py-3 text-text-primary hover:text-primary
@@ -279,4 +301,5 @@ export default function Navbar() {
       )}
     </nav>
   )
-                                                                              }
+}
+
