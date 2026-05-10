@@ -41,16 +41,222 @@ function ProfileSkeleton() {
   )
 }
 
+// ── Password change section ───────────────────────────────────────────────────
+
+function PasswordSection({ email }) {
+  const [open,        setOpen]        = useState(false)
+  const [currentPw,   setCurrentPw]   = useState('')
+  const [newPw,       setNewPw]       = useState('')
+  const [confirmPw,   setConfirmPw]   = useState('')
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNew,     setShowNew]     = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [saving,      setSaving]      = useState(false)
+  const [errors,      setErrors]      = useState({})
+
+  function reset() {
+    setCurrentPw('')
+    setNewPw('')
+    setConfirmPw('')
+    setErrors({})
+    setShowCurrent(false)
+    setShowNew(false)
+    setShowConfirm(false)
+  }
+
+  function handleCancel() {
+    reset()
+    setOpen(false)
+  }
+
+  function validate() {
+    const e = {}
+    if (!currentPw)           e.currentPw  = 'Current password is required'
+    if (newPw.length < 8)     e.newPw      = 'New password must be at least 8 characters'
+    if (newPw !== confirmPw)  e.confirmPw  = 'Passwords do not match'
+    if (newPw === currentPw)  e.newPw      = 'New password must be different from current'
+    return e
+  }
+
+  async function handleSave() {
+    const e = validate()
+    if (Object.keys(e).length > 0) { setErrors(e); return }
+
+    setSaving(true)
+    try {
+      // Step 1: verify current password by re-authenticating
+      const { error: authError } = await supabaseBrowser.auth.signInWithPassword({
+        email,
+        password: currentPw,
+      })
+      if (authError) {
+        setErrors({ currentPw: 'Current password is incorrect' })
+        setSaving(false)
+        return
+      }
+
+      // Step 2: update to new password
+      const { error: updateError } = await supabaseBrowser.auth.updateUser({
+        password: newPw,
+      })
+      if (updateError) throw updateError
+
+      toastSuccess('Password updated successfully!')
+      reset()
+      setOpen(false)
+    } catch {
+      toastError('Failed to update password. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Eye-toggle button shared across fields
+  function EyeButton({ show, onToggle }) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary
+                   hover:text-text-primary transition-colors p-1"
+        tabIndex={-1}
+        aria-label={show ? 'Hide password' : 'Show password'}
+      >
+        {show ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        )}
+      </button>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+          Password
+        </p>
+        {!open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="text-xs font-semibold text-primary hover:underline underline-offset-2"
+          >
+            Change
+          </button>
+        )}
+      </div>
+
+      {!open ? (
+        <p className="text-sm text-text-secondary">••••••••</p>
+      ) : (
+        <div className="space-y-4">
+
+          {/* Current password */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">
+              Current Password
+            </label>
+            <div className="relative">
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPw}
+                onChange={e => { setCurrentPw(e.target.value); setErrors(ev => ({ ...ev, currentPw: '' })) }}
+                placeholder="Your current password"
+                autoComplete="current-password"
+                className={`input-field pr-10 ${errors.currentPw ? 'border-red-400 focus:ring-red-300' : ''}`}
+              />
+              <EyeButton show={showCurrent} onToggle={() => setShowCurrent(s => !s)} />
+            </div>
+            {errors.currentPw && (
+              <p className="text-xs text-accent mt-1">{errors.currentPw}</p>
+            )}
+          </div>
+
+          {/* New password */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">
+              New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showNew ? 'text' : 'password'}
+                value={newPw}
+                onChange={e => { setNewPw(e.target.value); setErrors(ev => ({ ...ev, newPw: '' })) }}
+                placeholder="At least 8 characters"
+                autoComplete="new-password"
+                className={`input-field pr-10 ${errors.newPw ? 'border-red-400 focus:ring-red-300' : ''}`}
+              />
+              <EyeButton show={showNew} onToggle={() => setShowNew(s => !s)} />
+            </div>
+            {errors.newPw && (
+              <p className="text-xs text-accent mt-1">{errors.newPw}</p>
+            )}
+          </div>
+
+          {/* Confirm new password */}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1.5">
+              Confirm New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPw}
+                onChange={e => { setConfirmPw(e.target.value); setErrors(ev => ({ ...ev, confirmPw: '' })) }}
+                placeholder="Repeat new password"
+                autoComplete="new-password"
+                className={`input-field pr-10 ${errors.confirmPw ? 'border-red-400 focus:ring-red-300' : ''}`}
+              />
+              <EyeButton show={showConfirm} onToggle={() => setShowConfirm(s => !s)} />
+            </div>
+            {errors.confirmPw && (
+              <p className="text-xs text-accent mt-1">{errors.confirmPw}</p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              className="btn-secondary flex-1 text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary flex-1 text-sm"
+            >
+              {saving ? <Spinner size="sm" color="white" /> : 'Update Password'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
-  const [profile,  setProfile]  = useState(null)
-  const [loading,  setLoading]  = useState(true)
-  const [saving,   setSaving]   = useState(false)
-  const [editing,  setEditing]  = useState(false)
+  const [profile,    setProfile]    = useState(null)
+  const [loading,    setLoading]    = useState(true)
+  const [saving,     setSaving]     = useState(false)
+  const [editing,    setEditing]    = useState(false)
   const [signingOut, setSigningOut] = useState(false)
 
   // Editable fields
@@ -140,6 +346,9 @@ export default function ProfilePage() {
   const displayName = profile?.full_name || user.user_metadata?.full_name || 'Student'
   const email       = user.email ?? ''
   const joinedAt    = profile?.created_at ?? user.created_at
+
+  // Google OAuth users don't have a password to change
+  const isPasswordUser = user.app_metadata?.provider === 'email'
 
   return (
     <div className="page-enter min-h-screen bg-gray-50">
@@ -267,6 +476,9 @@ export default function ProfilePage() {
           )}
         </div>
 
+        {/* ── Password card (email/password users only) ────────────────────── */}
+        {isPasswordUser && <PasswordSection email={email} />}
+
         {/* ── Sign out ────────────────────────────────────────────────────── */}
         <div className="bg-white rounded-2xl border border-border/60 shadow-sm p-5">
           <p className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3">
@@ -297,4 +509,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-
