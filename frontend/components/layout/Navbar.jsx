@@ -12,13 +12,10 @@ function LogoMark() {
   return (
     <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
       <svg width="18" height="16" viewBox="0 0 18 16" fill="none">
-        {/* Left page */}
         <path d="M9 2C7 1 4 1 1.5 2L1.5 14C4 13 7 13 9 14Z"
               fill="white" opacity="0.95"/>
-        {/* Right page */}
         <path d="M9 2C11 1 14 1 16.5 2L16.5 14C14 13 11 13 9 14Z"
               fill="white" opacity="0.6"/>
-        {/* Spine */}
         <line x1="9" y1="2" x2="9" y2="14"
               stroke="white" strokeWidth="0.75" opacity="0.35"/>
       </svg>
@@ -46,7 +43,6 @@ export default function Navbar() {
   const { user, role, loading } = useAuth()
   const { cartCount } = useCart()
 
-  // Close profile dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e) {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -57,7 +53,6 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMenuOpen(false)
   }, [router])
@@ -87,6 +82,11 @@ export default function Navbar() {
   ]
   const navLinks = user ? studentLinks : guestLinks
 
+  // FIX: only show pulse spinner while loading AND we don't yet know if user exists.
+  // Once loading is done OR we know there's no user, show the correct state immediately.
+  // This prevents the login/signup buttons from being hidden behind a spinner indefinitely.
+  const showLoadingPulse = loading && !user
+
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm
                     border-b border-border z-50">
@@ -104,7 +104,6 @@ export default function Navbar() {
         {/* ── Desktop nav ───────────────────────────────────────────────────── */}
         <div className="hidden md:flex items-center gap-6">
 
-          {/* Nav links */}
           {navLinks.map(link => (
             <Link key={link.href} href={link.href}
                   className="text-text-secondary hover:text-primary transition-colors
@@ -121,10 +120,8 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Notification bell — logged-in users only */}
           {user && <NotificationBell />}
 
-          {/* Cart — logged-in users only */}
           {user && (
             <Link href="/cart"
                   className="relative min-h-[44px] flex items-center gap-1.5
@@ -142,8 +139,10 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Profile dropdown / auth buttons */}
-          {loading ? (
+          {/* Profile dropdown / auth buttons
+              FIX: only show pulse if loading AND no user confirmed yet.
+              If loading is still true but user is null, show login buttons right away. */}
+          {showLoadingPulse ? (
             <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
           ) : user ? (
             <div className="relative" ref={profileRef}>
@@ -205,10 +204,8 @@ export default function Navbar() {
         {/* ── Mobile: bell + cart + hamburger ───────────────────────────────── */}
         <div className="flex md:hidden items-center gap-1">
 
-          {/* Notification bell — mobile */}
           {user && <NotificationBell />}
 
-          {/* Cart — mobile */}
           {user && (
             <Link href="/cart"
                   className="relative min-h-[44px] min-w-[44px] flex items-center
