@@ -6,12 +6,12 @@ import { NextResponse } from 'next/server'
  * GET /auth/callback
  *
  * Supabase redirects here after Google OAuth completes.
- * This route exchanges the one-time `code` param for a real session,
+ * Exchanges the one-time `code` param for a real session,
  * sets the session cookies, then redirects the user onward.
  *
  * Query params Supabase sends:
  *   code  — one-time auth code to exchange for a session
- *   next  — optional redirect path (we default to /products)
+ *   next  — optional redirect path (defaults to /products)
  *
  * On failure: redirects to /login?error=auth_callback_failed
  */
@@ -19,6 +19,10 @@ export async function GET(request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/products'
+
+  // Validate the redirect destination — only allow relative paths on this origin
+  // to prevent open redirect attacks
+  const safeNext = next.startsWith('/') ? next : '/products'
 
   if (code) {
     const cookieStore = await cookies()
@@ -45,7 +49,7 @@ export async function GET(request) {
 
     if (!error) {
       // Session established — send them where they were going
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(`${origin}${safeNext}`)
     }
 
     console.error('[auth/callback] exchangeCodeForSession error:', error.message)
@@ -56,4 +60,3 @@ export async function GET(request) {
     `${origin}/login?error=auth_callback_failed`
   )
 }
-
