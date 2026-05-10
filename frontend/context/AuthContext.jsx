@@ -9,8 +9,6 @@ export function AuthProvider({ children }) {
   const [user,     setUser]     = useState(null)
   const [role,     setRole]     = useState(null)
   const [loading,  setLoading]  = useState(true)
-  // verified = true means we've confirmed the session with Supabase's server,
-  // not just read a cookie. LoginContent waits for this before redirecting.
   const [verified, setVerified] = useState(false)
 
   const resolveSession = useCallback(async (session) => {
@@ -25,11 +23,9 @@ export function AuthProvider({ children }) {
     setUser(session.user)
     setLoading(false)
 
-    // Fast role from JWT metadata
     const metaRole = session.user?.user_metadata?.role
     if (metaRole) setRole(metaRole)
 
-    // Confirm from profiles table in background
     try {
       const fetchedRole = await getUserRole(session.user.id)
       setRole(fetchedRole)
@@ -41,33 +37,16 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    // Use getUser() to verify with Supabase server — not just the cookie.
-    // This prevents stale sessions from triggering redirects in LoginContent.
-    supabaseBrowser.auth.getUser().then(({ data: { user: verifiedUser } }) => {
-      if (!verifiedUser) {
-        // No valid session — clear everything and unblock
-        setUser(null)
-        setRole(null)
-        setLoading(false)
-        setVerified(true)
-        return
-      }
-      // Valid session confirmed — now get full session object for metadata
-      supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
-        resolveSession(session)
-      })
-    }).catch(() => {
-      setLoading(false)
-      setVerified(true)
-    })
-
+    // onAuthStateChange is the single source of truth.
+    // It fires INITIAL_SESSION on mount with whatever session exists in the cookie.
+    // We no longer skip it — this fixes the Google OAuth navbar bug where
+    // user stayed null after being redirected to /products post-login.
+    //
+    // For the /login stale-session redirect bug: the middleware no longer
+    // redirects authenticated users away from /login, so we don't need to
+    // block INITIAL_SESSION anymore. The client handles it cleanly.
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
       (event, session) => {
-        // Skip the initial event — getUser() above is the authoritative
-        // server-verified source for the initial session state.
-        // Trusting the cookie here causes a stale-session redirect to /products
-        // when an unauthenticated user visits /login or /signup.
-        if (event === 'INITIAL_SESSION') return
         resolveSession(session)
       }
     )
@@ -87,4 +66,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
-
