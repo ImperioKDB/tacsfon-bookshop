@@ -17,13 +17,16 @@ export default function LoginContent() {
 
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user } = useAuth()
+  // verified comes from AuthContext — true only after Supabase server has confirmed
+  // the session (or confirmed there is none). Prevents stale-cookie redirect.
+  const { user, verified } = useAuth()
 
   const redirect = searchParams.get('redirect') || '/products'
 
   useEffect(() => {
-    if (user) router.push(redirect)
-  }, [user, redirect, router])
+    // Wait for verified before redirecting — prevents stale session bounce
+    if (verified && user) router.push(redirect)
+  }, [user, verified, redirect, router])
 
   async function handleSubmit(e) {
     e.preventDefault()
