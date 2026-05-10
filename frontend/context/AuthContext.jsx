@@ -6,48 +6,61 @@ import { getUserRole } from '@/lib/auth'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user,    setUser]    = useState(null)
-  const [role,    setRole]    = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [user,     setUser]     = useState(null)
+  const [role,     setRole]     = useState(null)
+  const [loading,  setLoading]  = useState(true)
+  // verified = true means we've confirmed the session with Supabase's server,
+  // not just read a cookie. LoginContent waits for this before redirecting.
+  const [verified, setVerified] = useState(false)
 
   const resolveSession = useCallback(async (session) => {
     if (!session?.user) {
       setUser(null)
       setRole(null)
-      // FIX: mark loading done immediately — no DB call needed for logged-out state
       setLoading(false)
+      setVerified(true)
       return
     }
 
-    // FIX: set user and mark loading DONE first so the navbar renders immediately.
-    // Then fetch the role in the background — role arriving slightly later is fine.
     setUser(session.user)
     setLoading(false)
 
-    // Role from JWT metadata is instant — use it as a fast initial value
+    // Fast role from JWT metadata
     const metaRole = session.user?.user_metadata?.role
     if (metaRole) setRole(metaRole)
 
-    // Then confirm from the profiles table (source of truth)
+    // Confirm from profiles table in background
     try {
       const fetchedRole = await getUserRole(session.user.id)
       setRole(fetchedRole)
     } catch {
-      // Keep the metadata role if the DB call fails
       if (!metaRole) setRole('student')
     }
+
+    setVerified(true)
   }, [])
 
   useEffect(() => {
-    // Hydrate on mount
-    supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
-      resolveSession(session)
+    // Use getUser() to verify with Supabase server — not just the cookie.
+    // This prevents stale sessions from triggering redirects in LoginContent.
+    supabaseBrowser.auth.getUser().then(({ data: { user: verifiedUser } }) => {
+      if (!verifiedUser) {
+        // No valid session — clear everything and unblock
+        setUser(null)
+        setRole(null)
+        setLoading(false)
+        setVerified(true)
+        return
+      }
+      // Valid session confirmed — now get full session object for metadata
+      supabaseBrowser.auth.getSession().then(({ data: { session } }) => {
+        resolveSession(session)
+      })
     }).catch(() => {
-      // If getSession itself fails, unblock the UI
       setLoading(false)
+      setVerified(true)
     })
 
-    // Stay in sync with all future auth events
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
       (_event, session) => {
         resolveSession(session)
@@ -58,7 +71,7 @@ export function AuthProvider({ children }) {
   }, [resolveSession])
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, setUser, setRole }}>
+    <AuthContext.Provider value={{ user, role, loading, verified, setUser, setRole }}>
       {children}
     </AuthContext.Provider>
   )
