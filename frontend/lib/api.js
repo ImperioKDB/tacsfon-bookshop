@@ -218,3 +218,4 @@ export const adminApi = {
   // Receipts
   getReceipts: (params) => authGet('/api/admin/receipts', params),
 }
+
