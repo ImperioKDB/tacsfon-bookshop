@@ -1,20 +1,18 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-// Singleton pattern — one client instance shared across the entire app.
-// Without this, createBrowserClient creates a new instance per import,
-// which means onAuthStateChange listeners don't share state and the
-// session is not propagated correctly after OAuth redirects.
-let client = null
+// Singleton — one shared instance across the entire app.
+// Prevents multiple listeners and session sync issues.
+let _client = null
 
 export function getSupabaseBrowser() {
-  if (!client) {
-    client = createBrowserClient(
+  if (!_client) {
+    _client = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     )
   }
-  return client
+  return _client
 }
 
-// Keep named export for backward compatibility with existing imports
+// Named export so existing imports (Navbar, etc.) still work unchanged
 export const supabaseBrowser = getSupabaseBrowser()
