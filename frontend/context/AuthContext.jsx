@@ -1,6 +1,6 @@
 'use client'
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { supabaseBrowser } from '@/lib/supabase'
+import { getSupabaseBrowser } from '@/lib/supabase'
 import { getUserRole } from '@/lib/auth'
 
 const AuthContext = createContext(null)
@@ -37,16 +37,19 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    // onAuthStateChange is the single source of truth.
-    // It fires INITIAL_SESSION on mount with whatever session exists in the cookie.
-    // We no longer skip it — this fixes the Google OAuth navbar bug where
-    // user stayed null after being redirected to /products post-login.
-    //
-    // For the /login stale-session redirect bug: the middleware no longer
-    // redirects authenticated users away from /login, so we don't need to
-    // block INITIAL_SESSION anymore. The client handles it cleanly.
-    const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
-      (event, session) => {
+    const supabase = getSupabaseBrowser()
+
+    // Read the session from cookie immediately — this is synchronous-fast
+    // and ensures the navbar shows the correct state on first render
+    // without waiting for a network round-trip.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      resolveSession(session)
+    })
+
+    // Then stay in sync with all auth changes (login, logout, token refresh,
+    // Google OAuth callback landing). This fires for every future event.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
         resolveSession(session)
       }
     )
