@@ -77,12 +77,22 @@ export async function signInWithPassword(email, password) {
 
 /**
  * Start Google OAuth flow.
+ * Passes the current ?redirect param through as ?next so after
+ * Google login the user lands where they intended, not always /products.
  * The redirect goes to /auth/callback which handles the code exchange.
  */
 export async function signInWithGoogle() {
-  const redirectTo = typeof window !== 'undefined'
-    ? `${window.location.origin}/auth/callback`
-    : `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
+  // FIX: read the ?redirect param from the current URL (e.g. /login?redirect=/orders)
+  // and forward it as ?next= so /auth/callback knows where to send the user after OAuth
+  const currentRedirect =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('redirect') || '/products'
+      : '/products'
+
+  const redirectTo =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
+      : `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
 
   const { data, error } = await supabaseBrowser.auth.signInWithOAuth({
     provider: 'google',
