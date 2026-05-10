@@ -17,13 +17,11 @@ export default function LoginContent() {
 
   const router       = useRouter()
   const searchParams = useSearchParams()
-  const { user, verified, loading: authLoading } = useAuth()
+  const { user, verified } = useAuth()
 
   const redirect = searchParams.get('redirect') || '/products'
 
-  // Only redirect once AuthContext has finished verifying with the server.
-  // This prevents the race where middleware refreshes the token and the
-  // browser client hasn't caught up yet.
+  // Only redirect once AuthContext has confirmed auth state from the server
   useEffect(() => {
     if (verified && user) router.replace(redirect)
   }, [user, verified, redirect, router])
@@ -56,10 +54,10 @@ export default function LoginContent() {
     }
   }
 
-  // Show a loading gate while we verify auth state.
-  // This prevents the form flashing briefly before an authenticated
-  // user gets redirected away.
-  if (!verified && authLoading) {
+  // Show spinner until auth state is confirmed from Supabase server.
+  // Once verified, either the useEffect above redirects (if logged in)
+  // or we show the form (if logged out).
+  if (!verified) {
     return (
       <div className="min-h-screen bg-primary-muted flex items-center justify-center">
         <Spinner size="lg" />
