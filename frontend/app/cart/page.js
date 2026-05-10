@@ -17,8 +17,10 @@ function CartItemRow({ item, onUpdate, onRemove }) {
   const [updating, setUpdating] = useState(false)
   const [removing, setRemoving] = useState(false)
 
-  const product = item.product
-  const maxQty  = product?.stock_qty ?? 99
+  // FIX: Supabase returns the joined row under the table name key `products`,
+  //      not `product`. Was always undefined before.
+  const product   = item.products
+  const maxQty    = product?.stock_qty ?? 99
   const lineTotal = formatPrice(item.quantity * Number(product?.price ?? 0))
 
   async function handleQtyChange(newQty) {
@@ -246,7 +248,6 @@ function OrderSummary({ cartCount, cartTotal }) {
 export default function CartPage() {
   const { cartItems, cartCount, cartTotal, loading, updateQuantity, removeFromCart } = useCart()
 
-  // Initial cart fetch is loading
   if (loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -255,7 +256,6 @@ export default function CartPage() {
     )
   }
 
-  // Empty cart
   if (cartItems.length === 0) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-4">
