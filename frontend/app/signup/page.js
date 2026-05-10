@@ -19,11 +19,15 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const router = useRouter()
-  const { user } = useAuth()
+  // FIX: destructure `verified` so the redirect only fires after the session has
+  // been confirmed server-side — matching the same guard used in LoginContent.
+  // Without this, `user` could be set from a stale cookie before getUser()
+  // resolves, causing an incorrect redirect to /products.
+  const { user, verified } = useAuth()
 
   useEffect(() => {
-    if (user) router.push('/products')
-  }, [user, router])
+    if (verified && user) router.push('/products')
+  }, [user, verified, router])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -92,10 +96,10 @@ export default function SignupPage() {
           {/* Heading */}
           <div className="text-center mb-6">
             <h1 className="text-xl font-bold text-text-primary">Create an account</h1>
-            <p className="text-text-secondary text-sm mt-1">Join UNIBEN&apos;s campus bookshop</p>
+            <p className="text-text-secondary text-sm mt-1">Join TACSFON Bookshop today</p>
           </div>
 
-          {/* Google button */}
+          {/* Google */}
           <button type="button" onClick={handleGoogleSignup}
             className="w-full flex items-center justify-center gap-3 border-2 border-border rounded-xl
                        py-3 px-4 text-text-primary font-semibold text-sm
@@ -120,7 +124,7 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Full Name" type="text" value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="John Doe" autoComplete="name" required />
+              placeholder="e.g. Bright Omoike" autoComplete="name" required />
 
             <Input label="Email Address" type="email" value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -129,7 +133,7 @@ export default function SignupPage() {
             <div className="relative">
               <Input label="Password" type={showPassword ? 'text' : 'password'} value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 8 characters" autoComplete="new-password" required />
+                placeholder="At least 8 characters" autoComplete="new-password" required />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-9 text-text-secondary hover:text-text-primary transition-colors"
                 aria-label={showPassword ? 'Hide' : 'Show'}>
@@ -138,8 +142,7 @@ export default function SignupPage() {
             </div>
 
             <div className="relative">
-              <Input label="Confirm Password" type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
+              <Input label="Confirm Password" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat your password" autoComplete="new-password" required />
               <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -166,4 +169,5 @@ export default function SignupPage() {
       </div>
     </div>
   )
-              }
+}
+
