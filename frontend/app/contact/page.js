@@ -111,7 +111,7 @@ export default function ContactPage() {
               </div>
               <div>
                 <p className="font-bold text-text-primary text-sm">Physical Location</p>
-                <p className="text-text-secondary text-sm mt-1">TACSFON Bookshop</p>
+                <p className="text-text-secondary text-sm mt-1">TACSFON Secretariat, BDPA</p>
                 <p className="text-text-secondary text-sm">University of Benin</p>
                 <p className="text-text-secondary text-sm">Benin City, Edo State</p>
               </div>
