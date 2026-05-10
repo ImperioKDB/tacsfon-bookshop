@@ -19,6 +19,14 @@ const CATEGORIES = [
   { label: 'Other',                emoji: '📦' },
 ]
 
+// ── Trust bar items ───────────────────────────────────────────────────────────
+
+const TRUST = [
+  { icon: '🛒', label: 'Order with ease' },
+  { icon: '🏠', label: 'Delivery to all UNIBEN hostels' },
+  { icon: '💬', label: 'WhatsApp support' },
+]
+
 function CategoryChip({ label, emoji }) {
   return (
     <Link
@@ -300,5 +308,3 @@ export default function Home() {
     </div>
   )
 }
-
-
