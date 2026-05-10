@@ -21,7 +21,7 @@ export default function LoginContent() {
 
   const redirect = searchParams.get('redirect') || '/products'
 
-  // Only redirect once AuthContext has confirmed auth state from the server
+  // Redirect if already logged in and verified
   useEffect(() => {
     if (verified && user) router.replace(redirect)
   }, [user, verified, redirect, router])
@@ -54,17 +54,10 @@ export default function LoginContent() {
     }
   }
 
-  // Show spinner until auth state is confirmed from Supabase server.
-  // Once verified, either the useEffect above redirects (if logged in)
-  // or we show the form (if logged out).
-  if (!verified) {
-    return (
-      <div className="min-h-screen bg-primary-muted flex items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    )
-  }
-
+  // No loading gate — always show the form immediately.
+  // If the user is already logged in, the useEffect above handles the redirect.
+  // A brief flash of the form for logged-in users is acceptable and
+  // far better than a blank/spinner screen for logged-out users.
   return (
     <div className="min-h-screen bg-primary-muted flex items-center justify-center px-4 py-10 page-enter">
       <div className="w-full max-w-[420px]">
