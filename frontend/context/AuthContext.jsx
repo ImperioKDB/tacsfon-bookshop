@@ -62,7 +62,12 @@ export function AuthProvider({ children }) {
     })
 
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        // Skip the initial event — getUser() above is the authoritative
+        // server-verified source for the initial session state.
+        // Trusting the cookie here causes a stale-session redirect to /products
+        // when an unauthenticated user visits /login or /signup.
+        if (event === 'INITIAL_SESSION') return
         resolveSession(session)
       }
     )
