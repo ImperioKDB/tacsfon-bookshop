@@ -17,14 +17,13 @@ export default function LoginContent() {
 
   const router       = useRouter()
   const searchParams = useSearchParams()
-  const { user, loading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   const redirect = searchParams.get('redirect') || '/products'
 
-  // Redirect if already logged in and verified
   useEffect(() => {
-    if (verified && user) router.replace(redirect)
-  }, [user, loading, redirect, router])
+    if (!authLoading && user) router.replace(redirect)
+  }, [user, authLoading, redirect, router])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -54,15 +53,10 @@ export default function LoginContent() {
     }
   }
 
-  // No loading gate — always show the form immediately.
-  // If the user is already logged in, the useEffect above handles the redirect.
-  // A brief flash of the form for logged-in users is acceptable and
-  // far better than a blank/spinner screen for logged-out users.
   return (
     <div className="min-h-screen bg-primary-muted flex items-center justify-center px-4 py-10 page-enter">
       <div className="w-full max-w-[420px]">
 
-        {/* Logo */}
         <div className="text-center mb-6">
           <Link href="/" className="inline-block">
             <span className="text-2xl font-extrabold text-primary tracking-tight">
@@ -71,7 +65,6 @@ export default function LoginContent() {
           </Link>
         </div>
 
-        {/* Card */}
         <div className="auth-card">
 
           <div className="text-center mb-6">
@@ -79,7 +72,6 @@ export default function LoginContent() {
             <p className="text-text-secondary text-sm mt-1">Sign in to your account</p>
           </div>
 
-          {/* Google */}
           <button type="button" onClick={handleGoogleLogin}
             className="w-full flex items-center justify-center gap-3 border-2 border-border
                        rounded-xl py-3 px-4 text-text-primary font-semibold text-sm
@@ -94,14 +86,12 @@ export default function LoginContent() {
             Continue with Google
           </button>
 
-          {/* Divider */}
           <div className="flex items-center gap-3 mb-5">
             <div className="flex-1 h-px bg-border" />
             <span className="text-xs text-text-secondary font-medium">or sign in with email</span>
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          {/* Email form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Email Address" type="email" value={email}
               onChange={(e) => setEmail(e.target.value)}
