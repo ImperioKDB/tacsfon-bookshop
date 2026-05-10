@@ -69,15 +69,6 @@ function ProductCardSkeleton() {
   )
 }
 
-// ── Trust bar ─────────────────────────────────────────────────────────────────
-
-const TRUST = [
-  { icon: '🚀', label: 'Fast hostel delivery' },
-  { icon: '✅', label: 'Verified products' },
-  { icon: '🔒', label: 'Secure bank transfer' },
-  { icon: '📞', label: 'WhatsApp support' },
-]
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Home() {
