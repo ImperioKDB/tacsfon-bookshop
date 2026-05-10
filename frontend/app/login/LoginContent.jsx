@@ -17,14 +17,14 @@ export default function LoginContent() {
 
   const router       = useRouter()
   const searchParams = useSearchParams()
-  const { user, verified } = useAuth()
+  const { user, loading } = useAuth()
 
   const redirect = searchParams.get('redirect') || '/products'
 
   // Redirect if already logged in and verified
   useEffect(() => {
     if (verified && user) router.replace(redirect)
-  }, [user, verified, redirect, router])
+  }, [user, loading, redirect, router])
 
   async function handleSubmit(e) {
     e.preventDefault()
