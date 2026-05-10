@@ -28,30 +28,34 @@ export async function middleware(request) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // getUser() hits the Supabase server to verify the token is still valid.
+  // getSession() only reads the cookie — it won't detect a logged-out session.
+  // Using getUser() prevents the stale-session redirect bug on /login after logout.
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
 
   const protectedRoutes = ['/cart', '/checkout', '/orders', '/profile']
-  const adminRoutes = ['/admin']
+  const adminRoutes     = ['/admin']
 
   const isProtected = protectedRoutes.some(r => pathname.startsWith(r))
-  const isAdmin = adminRoutes.some(r => pathname.startsWith(r))
+  const isAdmin     = adminRoutes.some(r => pathname.startsWith(r))
 
   // Redirect unauthenticated users away from protected routes
-  if ((isProtected || isAdmin) && !session) {
+  if ((isProtected || isAdmin) && !user) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  // Redirect logged-in users away from auth pages
-  if (session && (pathname === '/login' || pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/products', request.url))
+  // Only redirect away from login/signup if the user is genuinely authenticated
+  if (user && (pathname === '/login' || pathname === '/signup')) {
+    const redirect = request.nextUrl.searchParams.get('redirect') || '/products'
+    return NextResponse.redirect(new URL(redirect, request.url))
   }
 
   // NOTE: Admin role check (role === 'admin') is done client-side in /admin/layout.js
-  // Middleware can only confirm session existence, not query the profiles table
+  // Middleware only confirms session existence
 
   return response
 }
