@@ -12,13 +12,10 @@ function LogoMark() {
   return (
     <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
       <svg width="18" height="16" viewBox="0 0 18 16" fill="none">
-        {/* Left page */}
         <path d="M9 2C7 1 4 1 1.5 2L1.5 14C4 13 7 13 9 14Z"
               fill="white" opacity="0.95"/>
-        {/* Right page */}
         <path d="M9 2C11 1 14 1 16.5 2L16.5 14C14 13 11 13 9 14Z"
               fill="white" opacity="0.6"/>
-        {/* Spine */}
         <line x1="9" y1="2" x2="9" y2="14"
               stroke="white" strokeWidth="0.75" opacity="0.35"/>
       </svg>
@@ -46,7 +43,6 @@ export default function Navbar() {
   const { user, role, loading } = useAuth()
   const { cartCount } = useCart()
 
-  // Close profile dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e) {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
@@ -57,7 +53,6 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMenuOpen(false)
   }, [router])
@@ -93,7 +88,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-20
                       flex items-center justify-between">
 
-        {/* ── Logo ──────────────────────────────────────────────────────────── */}
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <LogoMark />
           <span className="text-[17px] font-extrabold text-primary tracking-tight">
@@ -101,10 +96,9 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* ── Desktop nav ───────────────────────────────────────────────────── */}
+        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
 
-          {/* Nav links */}
           {navLinks.map(link => (
             <Link key={link.href} href={link.href}
                   className="text-text-secondary hover:text-primary transition-colors
@@ -121,10 +115,8 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Notification bell — logged-in users only */}
           {user && <NotificationBell />}
 
-          {/* Cart — logged-in users only */}
           {user && (
             <Link href="/cart"
                   className="relative min-h-[44px] flex items-center gap-1.5
@@ -134,21 +126,16 @@ export default function Navbar() {
               Cart
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-3 bg-accent text-white text-xs
-                                 w-5 h-5 rounded-full flex items-center justify-center
-                                 font-bold">
+                                 w-5 h-5 rounded-full flex items-center justify-center font-bold">
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
               )}
             </Link>
           )}
 
-          {/* Profile dropdown / auth buttons
-              FIX: show a neutral placeholder while auth is still loading
-              (regardless of whether user is set yet). Previously `loading && user`
-              meant the spinner was skipped when loading=true but user=null, so
-              Login/Signup rendered immediately and could be clicked before the
-              session was verified — causing the middleware to redirect to /products. */}
-          {loading ? (
+          {/* Only pulse when loading AND a user is already confirmed.
+              Never block the Login/Signup buttons behind a spinner. */}
+          {loading && user ? (
             <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
           ) : user ? (
             <div className="relative" ref={profileRef}>
@@ -207,13 +194,11 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* ── Mobile: bell + cart + hamburger ───────────────────────────────── */}
+        {/* Mobile: bell + cart + hamburger */}
         <div className="flex md:hidden items-center gap-1">
 
-          {/* Notification bell — mobile */}
           {user && <NotificationBell />}
 
-          {/* Cart — mobile */}
           {user && (
             <Link href="/cart"
                   className="relative min-h-[44px] min-w-[44px] flex items-center
@@ -228,7 +213,6 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
@@ -249,7 +233,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── Mobile menu ───────────────────────────────────────────────────────── */}
+      {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b
                         border-border shadow-lg p-4 space-y-1 animate-fade-in">
@@ -273,9 +257,8 @@ export default function Navbar() {
           )}
 
           <div className="pt-3 border-t border-border flex flex-col gap-2">
-            {/* FIX: also guard the mobile menu auth section behind loading,
-                same reason as the desktop fix above. */}
-            {loading ? (
+            {/* Same fix — only pulse when loading AND user is confirmed */}
+            {loading && user ? (
               <div className="h-10 rounded-full bg-gray-100 animate-pulse" />
             ) : user ? (
               <>
@@ -311,3 +294,4 @@ export default function Navbar() {
     </nav>
   )
 }
+
