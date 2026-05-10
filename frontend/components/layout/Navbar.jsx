@@ -143,9 +143,12 @@ export default function Navbar() {
           )}
 
           {/* Profile dropdown / auth buttons
-              FIX: only show the pulse spinner when loading AND a user is already
-              confirmed. Never block the login/signup buttons behind a spinner. */}
-          {loading && user ? (
+              FIX: show a neutral placeholder while auth is still loading
+              (regardless of whether user is set yet). Previously `loading && user`
+              meant the spinner was skipped when loading=true but user=null, so
+              Login/Signup rendered immediately and could be clicked before the
+              session was verified — causing the middleware to redirect to /products. */}
+          {loading ? (
             <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
           ) : user ? (
             <div className="relative" ref={profileRef}>
@@ -270,7 +273,11 @@ export default function Navbar() {
           )}
 
           <div className="pt-3 border-t border-border flex flex-col gap-2">
-            {user ? (
+            {/* FIX: also guard the mobile menu auth section behind loading,
+                same reason as the desktop fix above. */}
+            {loading ? (
+              <div className="h-10 rounded-full bg-gray-100 animate-pulse" />
+            ) : user ? (
               <>
                 <div className="flex items-center gap-3 px-3 py-2">
                   <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20
