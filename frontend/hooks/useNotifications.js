@@ -8,17 +8,22 @@ const POLL_INTERVAL_MS = 30_000 // 30 seconds
 export function useNotifications() {
   const { user } = useAuth()
   const [notifications, setNotifications] = useState([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [loading, setLoading] = useState(false)
+  const [unreadCount, setUnreadCount]     = useState(0)
+  const [loading, setLoading]             = useState(false)
   const intervalRef = useRef(null)
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return
     try {
+      // FIX: notificationsApi.getAll() resolves to r.data, and the backend
+      // returns a paginated object:
+      //   { notifications: [...], unreadCount: N, page: 1, limit: 20 }
+      // The old code did setNotifications(data) (setting state to an object)
+      // and then called data.filter(...) which threw TypeError.
+      // The backend already computes unreadCount correctly, so we just use it.
       const data = await notificationsApi.getAll()
-      setNotifications(data)
-      // FIX: DB column is `is_read`, not `read`
-      setUnreadCount(data.filter(n => !n.is_read).length)
+      setNotifications(data.notifications ?? [])
+      setUnreadCount(data.unreadCount ?? 0)
     } catch {
       // Silently fail — don't show error toasts for background polling
     }
@@ -40,7 +45,7 @@ export function useNotifications() {
   }, [user, fetchNotifications])
 
   async function markRead(id) {
-    // Optimistic update — FIX: use is_read
+    // Optimistic update
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, is_read: true } : n)
     )
@@ -54,7 +59,7 @@ export function useNotifications() {
   }
 
   async function markAllRead() {
-    // Optimistic update — FIX: use is_read
+    // Optimistic update
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
     setUnreadCount(0)
     try {
