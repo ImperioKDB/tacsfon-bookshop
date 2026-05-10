@@ -28,9 +28,9 @@ export async function middleware(request) {
     }
   )
 
-  // getUser() hits the Supabase server to verify the token is still valid.
-  // getSession() only reads the cookie — it won't detect a logged-out session.
-  // Using getUser() prevents the stale-session redirect bug on /login after logout.
+  // getUser() verifies the token with Supabase's server.
+  // We still call it here so the middleware can refresh the token cookie
+  // when it expires — keeping the session alive automatically.
   const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
@@ -48,14 +48,11 @@ export async function middleware(request) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Only redirect away from login/signup if the user is genuinely authenticated
-  if (user && (pathname === '/login' || pathname === '/signup')) {
-    const redirect = request.nextUrl.searchParams.get('redirect') || '/products'
-    return NextResponse.redirect(new URL(redirect, request.url))
-  }
-
-  // NOTE: Admin role check (role === 'admin') is done client-side in /admin/layout.js
-  // Middleware only confirms session existence
+  // DO NOT redirect authenticated users away from /login or /signup here.
+  // The client (LoginContent / SignupPage) handles that after verifying
+  // auth state with getUser(). Doing it here causes a race condition where
+  // the server refreshes an expired token and redirects before the browser
+  // client has caught up — sending the user to /products unexpectedly.
 
   return response
 }
