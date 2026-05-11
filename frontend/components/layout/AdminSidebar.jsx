@@ -211,9 +211,9 @@ export default function AdminSidebar() {
 
   return (
     <>
-      {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-border
-                      flex items-center justify-between px-4 h-16 shadow-sm">
+      {/* Mobile top bar — sits BELOW the global Navbar (top-16) */}
+      <div className="md:hidden fixed top-16 left-0 right-0 z-40 bg-white border-b border-border
+                      flex items-center justify-between px-4 h-14 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-white font-bold text-xs">T</span>
@@ -241,8 +241,8 @@ export default function AdminSidebar() {
             className="absolute inset-0 bg-black/40 animate-fade-in"
             onClick={() => setOpen(false)}
           />
-          {/* Drawer */}
-          <div className="relative w-72 bg-white h-full shadow-xl animate-slide-up">
+          {/* Drawer — slides in from the left */}
+          <div className="relative w-72 bg-white h-full shadow-xl animate-slide-left">
             <button
               onClick={() => setOpen(false)}
               className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -266,4 +266,3 @@ export default function AdminSidebar() {
     </>
   )
 }
-
