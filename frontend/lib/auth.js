@@ -1,29 +1,17 @@
 import { supabaseBrowser } from '@/lib/supabase'
 
-/**
- * Get the current session (client-side).
- * Returns null if no session exists.
- */
 export async function getSession() {
   const { data: { session }, error } = await supabaseBrowser.auth.getSession()
   if (error) throw error
   return session
 }
 
-/**
- * Get the current user (client-side).
- * Returns null if not logged in.
- */
 export async function getUser() {
   const { data: { user }, error } = await supabaseBrowser.auth.getUser()
   if (error) throw error
   return user
 }
 
-/**
- * Get the current user's role from the profiles table.
- * Returns 'student' by default if no profile row exists.
- */
 export async function getUserRole(userId) {
   if (!userId) return null
   const { data, error } = await supabaseBrowser
@@ -31,24 +19,15 @@ export async function getUserRole(userId) {
     .select('role')
     .eq('id', userId)
     .single()
-  if (error) return 'student' // fail-safe default
+  if (error) return 'student'
   return data?.role ?? 'student'
 }
 
-/**
- * Sign out the current user.
- */
 export async function signOut() {
   const { error } = await supabaseBrowser.auth.signOut()
   if (error) throw error
 }
 
-/**
- * Sign up a new user with email and password.
- * @param {string} email
- * @param {string} password
- * @param {string} fullName
- */
 export async function signUp(email, password, fullName) {
   const { data, error } = await supabaseBrowser.auth.signUp({
     email,
@@ -61,11 +40,6 @@ export async function signUp(email, password, fullName) {
   return data
 }
 
-/**
- * Sign in with email and password.
- * @param {string} email
- * @param {string} password
- */
 export async function signInWithPassword(email, password) {
   const { data, error } = await supabaseBrowser.auth.signInWithPassword({
     email,
@@ -75,15 +49,7 @@ export async function signInWithPassword(email, password) {
   return data
 }
 
-/**
- * Start Google OAuth flow.
- * Passes the current ?redirect param through as ?next so after
- * Google login the user lands where they intended, not always /products.
- * The redirect goes to /auth/callback which handles the code exchange.
- */
 export async function signInWithGoogle() {
-  // FIX: read the ?redirect param from the current URL (e.g. /login?redirect=/orders)
-  // and forward it as ?next= so /auth/callback knows where to send the user after OAuth
   const currentRedirect =
     typeof window !== 'undefined'
       ? new URLSearchParams(window.location.search).get('redirect') || '/products'
@@ -96,21 +62,17 @@ export async function signInWithGoogle() {
 
   const { data, error } = await supabaseBrowser.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo },
+    options: {
+      redirectTo,
+      flowType: 'pkce',
+    },
   })
   if (error) throw error
   return data
 }
 
-/**
- * Map Supabase auth errors to user-friendly messages.
- * Use this in catch blocks on auth forms.
- * @param {Error} error
- * @returns {string}
- */
 export function getAuthErrorMessage(error) {
   const msg = error?.message?.toLowerCase() ?? ''
-
   if (msg.includes('invalid login credentials') || msg.includes('invalid email or password')) {
     return 'Invalid email or password. Please check your details and try again.'
   }
@@ -128,4 +90,3 @@ export function getAuthErrorMessage(error) {
   }
   return 'Something went wrong. Please try again.'
 }
-
