@@ -36,7 +36,7 @@ export default function AdminLayout({ children }) {
       <AdminSidebar />
       {/* Main content — offset for sidebar on desktop */}
       <div className="flex-1 md:ml-64 flex flex-col min-h-screen">
-        <main className="flex-1 p-4 md:p-8 pt-20 md:pt-8">
+        <main className="flex-1 p-4 md:p-8 pt-14 md:pt-8">
           {children}
         </main>
       </div>
