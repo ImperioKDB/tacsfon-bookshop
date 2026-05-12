@@ -56,7 +56,7 @@ function ProductsContent() {
     try {
       const data = await productsApi.getAll({
         search: debouncedSearch || undefined,
-        category: selectedCategory || undefined,
+        category_id: selectedCategory || undefined,
         page: 1,
         limit: LIMIT,
       })
@@ -81,7 +81,7 @@ function ProductsContent() {
     try {
       const data = await productsApi.getAll({
         search: debouncedSearch || undefined,
-        category: selectedCategory || undefined,
+        category_id: selectedCategory || undefined,
         page: nextPage,
         limit: LIMIT,
       })
