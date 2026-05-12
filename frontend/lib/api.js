@@ -90,11 +90,6 @@ async function buildError(res) {
   const err = new Error(body.error?.message || 'Request failed')
   err.status = res.status
   err.code = body.error?.code || null
-  // Attach payment-specific amounts for INCOMPLETE_PAYMENT (402) handling
-  if (body.data?.paid_amount !== undefined) {
-    err.paid_amount = body.data.paid_amount
-    err.expected_amount = body.data.expected_amount
-  }
   return err
 }
 
@@ -136,17 +131,13 @@ export const ordersApi = {
 }
 
 // Payment
-// ⚠️ FIXED vs original spec:
-//   - initiate: backend ignores body, derives everything from JWT — send empty object
-//   - verify:   backend uses POST (not GET), reads ref_id from req.body (not query string)
-// Backend: POST /api/payment/initiate, POST /api/payment/verify
-//
-// verify success response: { order_id, ref_id, share_token }
-// verify pending response: { status: 'pending', ref_id }  ← not an error, keep polling
-// verify 402 error: err.paid_amount + err.expected_amount available on the thrown error
+// initiate  → POST /api/payment/initiate  — returns { ref_id, total_amount, account_number, bank_name, account_name }
+// verify    → POST /api/payment/verify    — polls until order confirmed; returns { order_id, ref_id, share_token } or { status: 'pending', ref_id }
+// confirm   → POST /api/payment/admin/confirm (admin only) — confirms payment, creates order
 export const paymentApi = {
   initiate: ()        => authPost('/api/payment/initiate', {}),
   verify:   (ref_id)  => authPost('/api/payment/verify', { ref_id }),
+  confirm:  (ref_id)  => authPost('/api/payment/admin/confirm', { ref_id }),
 }
 
 // Notifications — all require auth
@@ -159,9 +150,6 @@ export const notificationsApi = {
 }
 
 // Receipts
-// ⚠️ FIXED vs original spec:
-//   - getByToken path is /share/:token, not /:token directly
-//   - getByOrderId was missing — needed by /orders/[id] page
 // Backend: GET /api/receipts/share/:token (public), GET /api/receipts/:orderId (auth)
 export const receiptsApi = {
   getByToken:   (token)   => get(`/api/receipts/share/${token}`),
@@ -176,10 +164,6 @@ export const authApi = {
 }
 
 // Admin
-// ⚠️ FIXED vs original spec:
-//   - getProducts: no GET /api/admin/products exists — use public /api/products
-//   - getCategories: no GET /api/admin/categories exists — use public /api/categories
-//   - uploadImage: added (was missing from spec) — uses multipart/form-data
 // Backend: all /api/admin/* routes require auth + admin role
 export const adminApi = {
   // Orders
@@ -190,32 +174,29 @@ export const adminApi = {
   // body: { customer_name, phone, notes, items: [{ product_id, quantity }] }
 
   // Products — uses public route for reads, admin routes for writes
-  getProducts:   (params) => authGet('/api/products', params),
-  createProduct: (body)   => authPost('/api/admin/products', body),
-  // body: { name, price, stock_qty, category_id, is_available?, image_url? }
-  updateProduct: (id, body)  => authPatch(`/api/admin/products/${id}`, body),
-  deleteProduct: (id)        => authDelete(`/api/admin/products/${id}`),
+  getProducts:   (params)       => authGet('/api/products', params),
+  createProduct: (body)         => authPost('/api/admin/products', body),
+  updateProduct: (id, body)     => authPatch(`/api/admin/products/${id}`, body),
+  deleteProduct: (id)           => authDelete(`/api/admin/products/${id}`),
   uploadImage:   (id, formData) => authUploadForm(`/api/admin/products/${id}/image`, formData),
-  // formData: FormData with field name 'image', max 5MB, jpeg/png/webp only
 
   // Categories — uses public route for reads
   getCategories:  ()     => get('/api/categories'),
   createCategory: (body) => authPost('/api/admin/categories', body),
-  // body: { name, description? }
   deleteCategory: (id)   => authDelete(`/api/admin/categories/${id}`),
 
   // Admins
   getAdmins:   ()     => authGet('/api/admin/admins'),
   createAdmin: (body) => authPost('/api/admin/admins', body),
-  // body: { email, password, full_name? }  — NOTE: full_name is a known backend gap
   deleteAdmin: (id)   => authDelete(`/api/admin/admins/${id}`),
 
   // Logs & dashboard
   getLogs:      (params) => authGet('/api/admin/logs', params),
-  // params: { page?, limit?, action? }
   getDashboard: ()       => authGet('/api/admin/dashboard'),
 
   // Receipts
   getReceipts: (params) => authGet('/api/admin/receipts', params),
-}
 
+  // Pending payments (manual bank transfer confirmation)
+  getPendingPayments: () => authGet('/api/admin/pending-payments'),
+}
