@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/hooks/useAuth'
-// FIX: was importing ordersApi — checkout uses paymentApi, not ordersApi
 import { paymentApi } from '@/lib/api'
 import Spinner from '@/components/ui/spinner'
 import EmptyState from '@/components/ui/EmptyState'
@@ -64,7 +63,6 @@ function CheckoutSummary({ cartItems, cartTotal }) {
         {cartItems.map(item => (
           <div key={item.id} className="flex justify-between text-sm gap-2">
             <span className="text-text-secondary line-clamp-2 flex-1">
-              {/* FIX: Supabase join key is `products`, not `product` */}
               {item.products?.name}
               <span className="text-text-secondary/60 ml-1">×{item.quantity}</span>
             </span>
@@ -219,14 +217,12 @@ function PaymentConfirmation({ order, bankDetails }) {
 // ── Delivery form ─────────────────────────────────────────────────────────────
 
 function DeliveryForm({ user, onSubmit, submitting, serverError }) {
-  // FIX: AuthContext does not expose `profile`. Pre-fill from user.user_metadata
-  //      which Supabase populates at signup time.
   const [form, setForm] = useState({
-    customer_name:    user?.user_metadata?.full_name ?? '',
-    phone:            user?.user_metadata?.phone     ?? '',
-    hostel:           '',
-    room:             '',
-    notes:            '',
+    customer_name: user?.user_metadata?.full_name ?? '',
+    phone:         user?.user_metadata?.phone     ?? '',
+    hostel:        '',
+    room:          '',
+    notes:         '',
   })
   const [errors, setErrors] = useState({})
 
@@ -377,14 +373,13 @@ function DeliveryForm({ user, onSubmit, submitting, serverError }) {
 
 export default function CheckoutPage() {
   const { cartItems, cartTotal, loading: cartLoading, clearCart } = useCart()
-  // FIX: AuthContext does not expose `profile` — destructure only what exists
-  const { user }  = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
 
-  const [step, setStep]               = useState(1)          // 1 = form, 2 = confirmation
+  const [step, setStep]               = useState(1)
   const [submitting, setSubmitting]   = useState(false)
   const [serverError, setServerError] = useState('')
-  const [orderResult, setOrderResult] = useState(null)       // { order, bankDetails }
+  const [orderResult, setOrderResult] = useState(null)
 
   if (!cartLoading && !user) {
     router.replace('/login?redirect=/checkout')
@@ -404,20 +399,17 @@ export default function CheckoutPage() {
     )
   }
 
-  async function handlePlaceOrder() {
+  // FIX: accept the payload from DeliveryForm and forward it to the API.
+  // Previously this function took no argument and called paymentApi.initiate()
+  // with an empty body, so the backend always got customer_name, phone, and
+  // delivery_address as undefined and returned the validation error shown on screen.
+  async function handlePlaceOrder(payload) {
     setSubmitting(true)
     setServerError('')
 
     try {
-      // FIX 1: was ordersApi.initiate(payload) — the correct endpoint is
-      //         paymentApi.initiate(), and the backend ignores any body,
-      //         deriving everything from the user's JWT + their cart.
-      const result = await paymentApi.initiate()
+      const result = await paymentApi.initiate(payload)
 
-      // FIX 2: backend returns a flat object:
-      //   { ref_id, total_amount, account_number, bank_name, account_name }
-      // The old code passed result.order / result.bankDetails which were both
-      // undefined. Map the response into the shape PaymentConfirmation expects.
       clearCart()
       setOrderResult({
         order: {
@@ -481,9 +473,6 @@ export default function CheckoutPage() {
             {cartLoading ? (
               <div className="flex justify-center py-8"><Spinner size="lg" /></div>
             ) : (
-              // FIX: pass `user` directly instead of `profile` (which doesn't
-              //      exist on AuthContext). DeliveryForm now pre-fills from
-              //      user.user_metadata.full_name / phone.
               <DeliveryForm
                 user={user}
                 onSubmit={handlePlaceOrder}
@@ -503,4 +492,3 @@ export default function CheckoutPage() {
     </div>
   )
 }
-
