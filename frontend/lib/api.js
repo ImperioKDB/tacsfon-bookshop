@@ -131,11 +131,12 @@ export const ordersApi = {
 }
 
 // Payment
-// initiate  → POST /api/payment/initiate  — returns { ref_id, total_amount, account_number, bank_name, account_name }
+// initiate  → POST /api/payment/initiate  — body: { customer_name, phone, delivery_address, notes? }
+//             returns { ref_id, total_amount, account_number, bank_name, account_name }
 // verify    → POST /api/payment/verify    — polls until order confirmed; returns { order_id, ref_id, share_token } or { status: 'pending', ref_id }
 // confirm   → POST /api/payment/admin/confirm (admin only) — confirms payment, creates order
 export const paymentApi = {
-  initiate: ()        => authPost('/api/payment/initiate', {}),
+  initiate: (body)    => authPost('/api/payment/initiate', body),  // FIX: was `() => authPost(..., {})` — payload was discarded
   verify:   (ref_id)  => authPost('/api/payment/verify', { ref_id }),
   confirm:  (ref_id)  => authPost('/api/payment/admin/confirm', { ref_id }),
 }
