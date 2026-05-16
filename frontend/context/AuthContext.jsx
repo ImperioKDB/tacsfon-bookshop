@@ -8,25 +8,34 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null)
   const [role,    setRole]    = useState(null)
-  const [loading, setLoading] = useState(true)   // true until first auth check resolves
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Get the current session on mount
-    supabaseBrowser.auth.getSession().then(async ({ data: { session } }) => {
-      const u = session?.user ?? null
-      setUser(u)
-      setRole(u ? await getUserRole(u.id) : null)
-      setLoading(false)   // ← auth check complete; Navbar now renders correctly
-    })
+    // Wrap in async so we can use try/finally — guarantees setLoading(false)
+    // is called even if getSession() or getUserRole() throws or rejects.
+    async function initAuth() {
+      try {
+        const { data: { session } } = await supabaseBrowser.auth.getSession()
+        const u = session?.user ?? null
+        setUser(u)
+        setRole(u ? await getUserRole(u.id) : null)
+      } catch {
+        // If auth check fails for any reason, treat as logged-out
+        setUser(null)
+        setRole(null)
+      } finally {
+        setLoading(false)  // always runs, so buttons always appear
+      }
+    }
 
-    // 2. Keep user/role in sync on every auth event (login, logout, token refresh)
+    initAuth()
+
+    // Keep user/role in sync on login, logout, token refresh
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
       async (event, session) => {
         const u = session?.user ?? null
         setUser(u)
         setRole(u ? await getUserRole(u.id) : null)
-        // Don't set loading here — we only want the initial spinner, not
-        // a flash on every token refresh
       }
     )
 
