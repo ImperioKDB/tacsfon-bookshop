@@ -12,15 +12,9 @@ function LogoMark() {
   return (
     <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
       <svg width="18" height="16" viewBox="0 0 18 16" fill="none">
-        {/* Left page */}
-        <path d="M9 2C7 1 4 1 1.5 2L1.5 14C4 13 7 13 9 14Z"
-              fill="white" opacity="0.95"/>
-        {/* Right page */}
-        <path d="M9 2C11 1 14 1 16.5 2L16.5 14C14 13 11 13 9 14Z"
-              fill="white" opacity="0.6"/>
-        {/* Spine */}
-        <line x1="9" y1="2" x2="9" y2="14"
-              stroke="white" strokeWidth="0.75" opacity="0.35"/>
+        <path d="M9 2C7 1 4 1 1.5 2L1.5 14C4 13 7 13 9 14Z" fill="white" opacity="0.95"/>
+        <path d="M9 2C11 1 14 1 16.5 2L16.5 14C14 13 11 13 9 14Z" fill="white" opacity="0.6"/>
+        <line x1="9" y1="2" x2="9" y2="14" stroke="white" strokeWidth="0.75" opacity="0.35"/>
       </svg>
     </div>
   )
@@ -29,10 +23,8 @@ function LogoMark() {
 function CartIcon({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" strokeWidth="2"
-         strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="9" cy="21" r="1"/>
-      <circle cx="20" cy="21" r="1"/>
+         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
       <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
     </svg>
   )
@@ -42,159 +34,91 @@ export default function Navbar() {
   const [menuOpen,    setMenuOpen]    = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
-  const router = useRouter()
-  const { user, role, loading } = useAuth()
-  const { cartCount } = useCart()
+  const router     = useRouter()
+  const { user, role } = useAuth()
+  const { cartCount }  = useCart()
 
-  // Close profile dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e) {
-      if (profileRef.current && !profileRef.current.contains(e.target)) {
+      if (profileRef.current && !profileRef.current.contains(e.target))
         setProfileOpen(false)
-      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMenuOpen(false)
-  }, [router])
+  useEffect(() => { setMenuOpen(false) }, [router])
 
   async function handleLogout() {
     try {
       await supabaseBrowser.auth.signOut()
-      setMenuOpen(false)
-      setProfileOpen(false)
+      setMenuOpen(false); setProfileOpen(false)
       toast.success('Logged out successfully')
       router.push('/')
-    } catch {
-      toast.error('Logout failed. Please try again.')
-    }
+    } catch { toast.error('Logout failed. Please try again.') }
   }
 
-  const firstName = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Student'
-
-  const guestLinks = [
-    { label: 'Browse',  href: '/products' },
-    { label: 'About',   href: '/about'    },
-    { label: 'Contact', href: '/contact'  },
-  ]
-  const studentLinks = [
-    { label: 'Browse', href: '/products' },
-    { label: 'Orders', href: '/orders'   },
-  ]
+  const firstName  = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Account'
+  const initial    = firstName[0]?.toUpperCase() ?? '?'
+  const guestLinks   = [{ label: 'Browse', href: '/products' }, { label: 'About', href: '/about' }, { label: 'Contact', href: '/contact' }]
+  const studentLinks = [{ label: 'Browse', href: '/products' }, { label: 'Orders', href: '/orders' }]
   const navLinks = user ? studentLinks : guestLinks
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm
-                    border-b border-border z-50">
-      <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-20
-                      flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-border z-50">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
 
-        {/* ── Logo ──────────────────────────────────────────────────────────── */}
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <LogoMark />
-          <span className="text-[17px] font-extrabold text-primary tracking-tight">
-            TACSFON Bookshop
-          </span>
+          <span className="text-[17px] font-extrabold text-primary tracking-tight">TACSFON Bookshop</span>
         </Link>
 
-        {/* ── Desktop nav ───────────────────────────────────────────────────── */}
+        {/* ── Desktop nav ─────────────────────────────── */}
         <div className="hidden md:flex items-center gap-6">
-
-          {/* Nav links */}
           {navLinks.map(link => (
             <Link key={link.href} href={link.href}
-                  className="text-text-secondary hover:text-primary transition-colors
-                             min-h-[44px] flex items-center text-sm font-medium">
+                  className="text-text-secondary hover:text-primary transition-colors min-h-[44px] flex items-center text-sm font-medium">
               {link.label}
             </Link>
           ))}
-
           {role === 'admin' && (
-            <Link href="/admin"
-                  className="text-text-secondary hover:text-primary transition-colors
-                             min-h-[44px] flex items-center text-sm font-medium">
+            <Link href="/admin" className="text-text-secondary hover:text-primary transition-colors min-h-[44px] flex items-center text-sm font-medium">
               Dashboard
             </Link>
           )}
-
-          {/* Notification bell — logged-in users only */}
           {user && <NotificationBell />}
-
-          {/* Cart — logged-in users only */}
           {user && (
-            <Link href="/cart"
-                  className="relative min-h-[44px] flex items-center gap-1.5
-                             text-text-secondary hover:text-primary transition-colors
-                             text-sm font-medium">
-              <CartIcon size={18} />
-              Cart
+            <Link href="/cart" className="relative min-h-[44px] flex items-center gap-1.5 text-text-secondary hover:text-primary transition-colors text-sm font-medium">
+              <CartIcon size={18} />Cart
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-3 bg-accent text-white text-xs
-                                 w-5 h-5 rounded-full flex items-center justify-center
-                                 font-bold">
+                <span className="absolute -top-1 -right-3 bg-accent text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
               )}
             </Link>
           )}
-
-          {/* Profile dropdown / auth buttons
-              FIX: show a neutral placeholder while auth is still loading
-              (regardless of whether user is set yet). Previously `loading && user`
-              meant the spinner was skipped when loading=true but user=null, so
-              Login/Signup rendered immediately and could be clicked before the
-              session was verified — causing the middleware to redirect to /products. */}
-          {loading ? (
-            <div className="w-8 h-8 rounded-full bg-gray-100 animate-pulse" />
-          ) : user ? (
+          {user ? (
             <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => setProfileOpen(prev => !prev)}
-                className="flex items-center gap-2 min-h-[44px] text-sm font-medium
-                           text-text-secondary hover:text-primary transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20
-                                flex items-center justify-center text-primary font-bold text-xs">
-                  {firstName[0].toUpperCase()}
+              <button onClick={() => setProfileOpen(p => !p)}
+                      className="flex items-center gap-2 min-h-[44px] text-sm font-medium text-text-secondary hover:text-primary transition-colors">
+                <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                  {initial}
                 </div>
                 <span>{firstName}</span>
-                <svg className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`}
-                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round"
-                        strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <svg className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
                 </svg>
               </button>
-
               {profileOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl
-                                border border-border shadow-lg py-2 animate-fade-in">
-                  <Link href="/profile" onClick={() => setProfileOpen(false)}
-                        className="block px-4 py-3 text-sm text-text-primary
-                                   hover:bg-primary-muted hover:text-primary transition-colors">
-                    👤 View Profile
-                  </Link>
-                  <Link href="/orders" onClick={() => setProfileOpen(false)}
-                        className="block px-4 py-3 text-sm text-text-primary
-                                   hover:bg-primary-muted hover:text-primary transition-colors">
-                    📦 My Orders
-                  </Link>
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl border border-border shadow-lg py-2 animate-fade-in">
+                  <Link href="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">👤 View Profile</Link>
+                  <Link href="/orders"  onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">📦 My Orders</Link>
                   {role === 'admin' && (
-                    <Link href="/admin" onClick={() => setProfileOpen(false)}
-                          className="block px-4 py-3 text-sm text-text-primary
-                                     hover:bg-primary-muted hover:text-primary transition-colors">
-                      ⚙️ Admin Dashboard
-                    </Link>
+                    <Link href="/admin" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">⚙️ Admin Dashboard</Link>
                   )}
                   <div className="border-t border-border mt-1 pt-1">
-                    <button onClick={handleLogout}
-                            className="w-full text-left px-4 py-3 text-sm text-accent
-                                       hover:bg-red-50 transition-colors">
-                      🚪 Logout
-                    </button>
+                    <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-accent hover:bg-red-50 transition-colors">🚪 Logout</button>
                   </div>
                 </div>
               )}
@@ -207,41 +131,51 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* ── Mobile: bell + cart + hamburger ───────────────────────────────── */}
+        {/* ── Mobile top bar ───────────────────────────── */}
         <div className="flex md:hidden items-center gap-1">
-
-          {/* Notification bell — mobile */}
           {user && <NotificationBell />}
 
-          {/* Cart — mobile */}
+          {/* Cart */}
           {user && (
-            <Link href="/cart"
-                  className="relative min-h-[44px] min-w-[44px] flex items-center
-                             justify-center text-text-secondary hover:text-primary transition-colors">
+            <Link href="/cart" className="relative min-h-[44px] min-w-[44px] flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
               <CartIcon size={20} />
               {cartCount > 0 && (
-                <span className="absolute top-1.5 right-0.5 bg-accent text-white text-xs
-                                 w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                <span className="absolute top-1.5 right-0.5 bg-accent text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
                   {cartCount > 9 ? '9+' : cartCount}
                 </span>
               )}
             </Link>
           )}
 
+          {/* Profile avatar (logged in) — visible directly in top bar */}
+          {user && (
+            <button onClick={() => setMenuOpen(!menuOpen)}
+                    className="w-9 h-9 rounded-full bg-primary-light border-2 border-primary/30
+                               flex items-center justify-center text-primary font-bold text-sm
+                               hover:border-primary transition-colors">
+              {initial}
+            </button>
+          )}
+
+          {/* Login button (logged out) — visible directly in top bar */}
+          {!user && (
+            <Link href="/login"
+                  className="text-xs font-semibold text-primary border border-primary/40
+                             rounded-full px-3 py-1.5 hover:bg-primary-muted transition-colors">
+              Login
+            </Link>
+          )}
+
           {/* Hamburger */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
-            aria-label="Toggle menu"
-          >
+          <button onClick={() => setMenuOpen(!menuOpen)}
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
+                  aria-label="Toggle menu">
             {menuOpen ? (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M18 6 6 18M6 6l12 12"/>
               </svg>
             ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M3 12h18M3 6h18M3 18h18"/>
               </svg>
             )}
@@ -249,60 +183,45 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── Mobile menu ───────────────────────────────────────────────────────── */}
+      {/* ── Mobile menu (hamburger) ───────────────────── */}
       {menuOpen && (
-        <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b
-                        border-border shadow-lg p-4 space-y-1 animate-fade-in">
-
+        <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b border-border shadow-lg p-4 space-y-1 animate-fade-in">
           {navLinks.map(link => (
             <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)}
-                  className="block px-3 py-3 text-text-primary hover:text-primary
-                             hover:bg-primary-muted rounded-xl transition-colors
-                             min-h-[44px] flex items-center text-sm font-medium">
+                  className="block px-3 py-3 text-text-primary hover:text-primary hover:bg-primary-muted rounded-xl transition-colors min-h-[44px] flex items-center text-sm font-medium">
               {link.label}
             </Link>
           ))}
-
           {role === 'admin' && (
             <Link href="/admin" onClick={() => setMenuOpen(false)}
-                  className="block px-3 py-3 text-text-primary hover:text-primary
-                             hover:bg-primary-muted rounded-xl transition-colors
-                             min-h-[44px] flex items-center text-sm font-medium">
+                  className="block px-3 py-3 text-text-primary hover:text-primary hover:bg-primary-muted rounded-xl transition-colors min-h-[44px] flex items-center text-sm font-medium">
               ⚙️ Admin Dashboard
             </Link>
           )}
 
           <div className="pt-3 border-t border-border flex flex-col gap-2">
-            {/* FIX: also guard the mobile menu auth section behind loading,
-                same reason as the desktop fix above. */}
-            {loading ? (
-              <div className="h-10 rounded-full bg-gray-100 animate-pulse" />
-            ) : user ? (
+            {user ? (
               <>
                 <div className="flex items-center gap-3 px-3 py-2">
-                  <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20
-                                  flex items-center justify-center text-primary font-bold text-xs">
-                    {firstName[0].toUpperCase()}
+                  <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                    {initial}
                   </div>
-                  <span className="text-sm text-text-secondary">Hey, {firstName}!</span>
+                  <span className="text-sm font-medium text-text-primary">Hey, {firstName}!</span>
                 </div>
-                <Link href="/profile" onClick={() => setMenuOpen(false)}
-                      className="btn-secondary w-full text-sm">
-                  View Profile
-                </Link>
+                <Link href="/profile" onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">View Profile</Link>
+                <Link href="/orders"  onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">My Orders</Link>
+                {role === 'admin' && (
+                  <Link href="/admin" onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">⚙️ Admin</Link>
+                )}
                 <button onClick={handleLogout}
-                        className="w-full min-h-[44px] flex items-center justify-center
-                                   rounded-full px-6 py-3 border-2 border-accent text-accent
-                                   text-sm font-semibold hover:bg-red-50 transition-all duration-200">
+                        className="w-full min-h-[44px] flex items-center justify-center rounded-full px-6 py-3 border-2 border-accent text-accent text-sm font-semibold hover:bg-red-50 transition-all duration-200">
                   Logout
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login"  onClick={() => setMenuOpen(false)}
-                      className="btn-secondary w-full text-sm">Login</Link>
-                <Link href="/signup" onClick={() => setMenuOpen(false)}
-                      className="btn-primary w-full text-sm">Sign Up</Link>
+                <Link href="/login"  onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">Login</Link>
+                <Link href="/signup" onClick={() => setMenuOpen(false)} className="btn-primary  w-full text-sm">Sign Up</Link>
               </>
             )}
           </div>
