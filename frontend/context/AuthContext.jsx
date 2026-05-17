@@ -11,31 +11,30 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Wrap in async so we can use try/finally — guarantees setLoading(false)
-    // is called even if getSession() or getUserRole() throws or rejects.
-    async function initAuth() {
-      try {
-        const { data: { session } } = await supabaseBrowser.auth.getSession()
+    // 1. Read the current session from local storage immediately.
+    //    getSession() is essentially synchronous — it resolves in milliseconds.
+    //    The .catch() guarantees loading is ALWAYS set to false no matter what.
+    supabaseBrowser.auth.getSession()
+      .then(async ({ data: { session } }) => {
         const u = session?.user ?? null
         setUser(u)
-        setRole(u ? await getUserRole(u.id) : null)
-      } catch {
-        // If auth check fails for any reason, treat as logged-out
+        setRole(u ? await getUserRole(u.id).catch(() => null) : null)
+      })
+      .catch(() => {
         setUser(null)
         setRole(null)
-      } finally {
-        setLoading(false)  // always runs, so buttons always appear
-      }
-    }
+      })
+      .finally(() => {
+        setLoading(false)
+      })
 
-    initAuth()
-
-    // Keep user/role in sync on login, logout, token refresh
+    // 2. Keep state in sync on every auth event (login, logout, token refresh).
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
       async (event, session) => {
         const u = session?.user ?? null
         setUser(u)
-        setRole(u ? await getUserRole(u.id) : null)
+        setRole(u ? await getUserRole(u.id).catch(() => null) : null)
+        setLoading(false)
       }
     )
 
