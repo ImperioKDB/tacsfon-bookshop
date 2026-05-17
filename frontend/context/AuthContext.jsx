@@ -11,44 +11,35 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let cancelled = false
-
+    // Wrap in async so we can use try/finally — guarantees setLoading(false)
+    // is called even if getSession() or getUserRole() throws or rejects.
     async function initAuth() {
       try {
-        // 3-second timeout — if Supabase hangs for any reason,
-        // loading still resolves and the buttons appear.
-        const timeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('auth_timeout')), 3000)
-        )
-        const { data: { session } } = await Promise.race([
-          supabaseBrowser.auth.getSession(),
-          timeout,
-        ])
-        if (cancelled) return
+        const { data: { session } } = await supabaseBrowser.auth.getSession()
         const u = session?.user ?? null
         setUser(u)
         setRole(u ? await getUserRole(u.id) : null)
       } catch {
-        // Network error, timeout, bad env vars — treat as logged-out
-        if (!cancelled) { setUser(null); setRole(null) }
+        // If auth check fails for any reason, treat as logged-out
+        setUser(null)
+        setRole(null)
       } finally {
-        if (!cancelled) setLoading(false)
+        setLoading(false)  // always runs, so buttons always appear
       }
     }
 
     initAuth()
 
+    // Keep user/role in sync on login, logout, token refresh
     const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
       async (event, session) => {
-        if (cancelled) return
         const u = session?.user ?? null
         setUser(u)
         setRole(u ? await getUserRole(u.id) : null)
-        setLoading(false) // also resolve on any auth state change
       }
     )
 
-    return () => { cancelled = true; subscription.unsubscribe() }
+    return () => subscription.unsubscribe()
   }, [])
 
   return (
