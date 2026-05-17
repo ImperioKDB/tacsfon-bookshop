@@ -21,6 +21,7 @@ export default function LoginContent() {
 
   const redirect = searchParams.get('redirect') || '/products'
 
+  // If already logged in, redirect immediately
   useEffect(() => {
     if (!authLoading && user) router.replace(redirect)
   }, [user, authLoading, redirect, router])
@@ -37,10 +38,12 @@ export default function LoginContent() {
     try {
       await signInWithPassword(email, password)
       toastSuccess('Welcome back! 🎉')
-      router.replace(redirect)
+      // Use a hard redirect so AuthContext re-reads the session from storage.
+      // router.replace() is too fast — it navigates before onAuthStateChange
+      // fires, so the navbar still shows "logged out" on the destination page.
+      window.location.href = redirect
     } catch (error) {
       toastError(getAuthErrorMessage(error))
-    } finally {
       setLoading(false)
     }
   }
