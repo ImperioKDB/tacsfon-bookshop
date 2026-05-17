@@ -1,45 +1,46 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+import { NextResponse }        from 'next/server'
 
 /**
  * GET /auth/callback
  *
  * Supabase redirects here after Google OAuth completes.
  * Exchanges the one-time `code` param for a real session,
- * sets the session cookies, then redirects the user onward.
+ * sets the session cookies on the redirect response,
+ * then sends the user to their destination.
  *
- * Query params Supabase sends:
- *   code  — one-time auth code to exchange for a session
- *   next  — optional redirect path (defaults to /products)
- *
- * On failure: redirects to /login?error=auth_callback_failed
+ * FIX: previously cookies were set on `cookieStore` (the incoming
+ * request store) but a separate NextResponse.redirect() was returned.
+ * Cookies never reached the browser, so the session was lost.
+ * Now we create the response first and set cookies directly on it.
  */
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/products'
 
-  // Validate the redirect destination — only allow relative paths on this origin
-  // to prevent open redirect attacks
+  // Only allow relative paths to prevent open redirect attacks
   const safeNext = next.startsWith('/') ? next : '/products'
 
   if (code) {
-    const cookieStore = await cookies()
+    // Create the redirect response FIRST so we can attach cookies to it
+    const response = NextResponse.redirect(`${origin}${safeNext}`)
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         cookies: {
+          // Read from the incoming request cookies (for PKCE verifier)
           get(name) {
-            return cookieStore.get(name)?.value
+            return request.cookies.get(name)?.value
           },
+          // Write to the RESPONSE that the browser will actually receive
           set(name, value, options) {
-            cookieStore.set({ name, value, ...options })
+            response.cookies.set({ name, value, ...options })
           },
           remove(name, options) {
-            cookieStore.set({ name, value: '', ...options })
+            response.cookies.set({ name, value: '', ...options })
           },
         },
       }
@@ -48,15 +49,12 @@ export async function GET(request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      // Session established — send them where they were going
-      return NextResponse.redirect(`${origin}${safeNext}`)
+      // Session cookies are now on `response` — browser will receive them
+      return response
     }
 
     console.error('[auth/callback] exchangeCodeForSession error:', error.message)
   }
 
-  // Missing code or exchange failed — redirect to login with error flag
-  return NextResponse.redirect(
-    `${origin}/login?error=auth_callback_failed`
-  )
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
 }
