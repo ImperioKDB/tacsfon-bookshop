@@ -38,9 +38,9 @@ export default function LoginContent() {
     try {
       await signInWithPassword(email, password)
       toastSuccess('Welcome back! 🎉')
-      // Use a hard redirect so AuthContext re-reads the session from storage.
-      // router.replace() is too fast — it navigates before onAuthStateChange
-      // fires, so the navbar still shows "logged out" on the destination page.
+      // Hard redirect — forces AuthContext to re-read the fresh session.
+      // router.replace() navigates before onAuthStateChange fires, leaving
+      // the navbar stuck on logged-out state.
       window.location.href = redirect
     } catch (error) {
       toastError(getAuthErrorMessage(error))
