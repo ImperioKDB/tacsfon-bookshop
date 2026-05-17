@@ -11,34 +11,41 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 1. Read the current session from local storage immediately.
-    //    getSession() is essentially synchronous — it resolves in milliseconds.
-    //    The .catch() guarantees loading is ALWAYS set to false no matter what.
-    supabaseBrowser.auth.getSession()
-      .then(async ({ data: { session } }) => {
+    async function init() {
+      try {
+        const { data: { session } } = await supabaseBrowser.auth.getSession()
         const u = session?.user ?? null
         setUser(u)
         setRole(u ? await getUserRole(u.id).catch(() => null) : null)
-      })
-      .catch(() => {
+      } catch {
         setUser(null)
         setRole(null)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-
-    // 2. Keep state in sync on every auth event (login, logout, token refresh).
-    const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
-      async (event, session) => {
-        const u = session?.user ?? null
-        setUser(u)
-        setRole(u ? await getUserRole(u.id).catch(() => null) : null)
-        setLoading(false)
       }
-    )
+      // Outside the try/catch — this line ALWAYS runs no matter what
+      setLoading(false)
+    }
 
-    return () => subscription.unsubscribe()
+    init()
+
+    // Keep in sync on login / logout / token refresh
+    let unsubscribe = () => {}
+    try {
+      const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
+        async (_, session) => {
+          try {
+            const u = session?.user ?? null
+            setUser(u)
+            setRole(u ? await getUserRole(u.id).catch(() => null) : null)
+          } catch {
+            setRole(null)
+          }
+          setLoading(false)
+        }
+      )
+      unsubscribe = () => subscription.unsubscribe()
+    } catch {}
+
+    return unsubscribe
   }, [])
 
   return (
