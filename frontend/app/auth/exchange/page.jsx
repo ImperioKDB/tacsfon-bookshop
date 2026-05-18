@@ -1,41 +1,37 @@
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabaseBrowser } from '@/lib/supabase'
+import { useAuth } from '@/context/AuthContext'
 
 /**
- * /auth/exchange
+ * /auth/exchange — fallback exchange page (kept for older links that point here)
  *
- * Exchanges the OAuth code client-side using supabaseBrowser,
- * so the session is stored in localStorage where AuthContext can find it.
+ * detectSessionInUrl:true in supabaseBrowser handles the exchange automatically.
+ * This page just waits for AuthContext to confirm the session, then redirects.
+ * A 10-second timeout redirects to login if something goes wrong.
  */
 export default function AuthExchange() {
-  const router = useRouter()
+  const router  = useRouter()
+  const { user } = useAuth()
+  const [next,  setNext]  = useState('/products')
 
   useEffect(() => {
     const params   = new URLSearchParams(window.location.search)
-    const code     = params.get('code')
-    const next     = params.get('next') || '/products'
-    const safeNext = next.startsWith('/') ? next : '/products'
+    const n        = params.get('next') || '/products'
+    setNext(n.startsWith('/') ? n : '/products')
+  }, [])
 
-    if (!code) {
+  // Redirect once user is set by onAuthStateChange
+  useEffect(() => {
+    if (user) router.replace(next)
+  }, [user, next, router])
+
+  // 10-second fallback to avoid infinite spinner
+  useEffect(() => {
+    const t = setTimeout(() => {
       router.replace('/login?error=auth_callback_failed')
-      return
-    }
-
-    supabaseBrowser.auth
-      .exchangeCodeForSession(code)
-      .then(({ error }) => {
-        if (error) {
-          console.error('[auth/exchange]', error.message)
-          router.replace('/login?error=auth_callback_failed')
-        } else {
-          router.replace(safeNext)
-        }
-      })
-      .catch(() => {
-        router.replace('/login?error=auth_callback_failed')
-      })
+    }, 10_000)
+    return () => clearTimeout(t)
   }, [router])
 
   return (
