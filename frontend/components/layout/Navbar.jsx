@@ -1,10 +1,9 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
-import { supabaseBrowser } from '@/lib/supabase'
+import { signOut } from '@/lib/auth'
 import NotificationBell from '@/components/notifications/NotificationBell'
 import toast from 'react-hot-toast'
 
@@ -34,9 +33,8 @@ export default function Navbar() {
   const [menuOpen,    setMenuOpen]    = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
-  const router     = useRouter()
-  const { user, role } = useAuth()
-  const { cartCount }  = useCart()
+  const { user, role, loading } = useAuth()
+  const { cartCount } = useCart()
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -47,45 +45,100 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => { setMenuOpen(false) }, [router])
-
   async function handleLogout() {
     try {
-      await supabaseBrowser.auth.signOut()
-      setMenuOpen(false); setProfileOpen(false)
-      toast.success('Logged out successfully')
-      router.push('/')
-    } catch { toast.error('Logout failed. Please try again.') }
+      await signOut()
+    } catch {}
+    // Hard redirect — clears all React state and localStorage reliably
+    window.location.href = '/'
   }
 
-  const firstName  = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Account'
-  const initial    = firstName[0]?.toUpperCase() ?? '?'
+  const firstName = user?.user_metadata?.full_name?.split(' ')[0] ?? 'Account'
+  const initial   = firstName[0]?.toUpperCase() ?? '?'
+
   const guestLinks   = [{ label: 'Browse', href: '/products' }, { label: 'About', href: '/about' }, { label: 'Contact', href: '/contact' }]
   const studentLinks = [{ label: 'Browse', href: '/products' }, { label: 'Orders', href: '/orders' }]
   const navLinks = user ? studentLinks : guestLinks
+
+  // Auth section — no loading gate so buttons always visible
+  const AuthSection = ({ mobile = false }) => {
+    if (user) {
+      return mobile ? (
+        <>
+          <div className="flex items-center gap-3 px-3 py-2">
+            <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+              {initial}
+            </div>
+            <span className="text-sm font-medium text-text-primary">Hey, {firstName}!</span>
+          </div>
+          <Link href="/profile" onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">View Profile</Link>
+          <Link href="/orders"  onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">My Orders</Link>
+          {role === 'admin' && (
+            <Link href="/admin" onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">Admin Dashboard</Link>
+          )}
+          <button onClick={handleLogout}
+                  className="w-full min-h-[44px] flex items-center justify-center rounded-full px-6 py-3 border-2 border-accent text-accent text-sm font-semibold hover:bg-red-50 transition-all">
+            Logout
+          </button>
+        </>
+      ) : (
+        <div className="relative" ref={profileRef}>
+          <button onClick={() => setProfileOpen(p => !p)}
+                  className="flex items-center gap-2 min-h-[44px] text-sm font-medium text-text-secondary hover:text-primary transition-colors">
+            <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+              {initial}
+            </div>
+            <span>{firstName}</span>
+            <svg className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          {profileOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl border border-border shadow-lg py-2 animate-fade-in">
+              <Link href="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">View Profile</Link>
+              <Link href="/orders"  onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">My Orders</Link>
+              {role === 'admin' && (
+                <Link href="/admin" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">Admin Dashboard</Link>
+              )}
+              <div className="border-t border-border mt-1 pt-1">
+                <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-accent hover:bg-red-50 transition-colors">Logout</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+    }
+    return mobile ? (
+      <>
+        <Link href="/login"  onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">Login</Link>
+        <Link href="/signup" onClick={() => setMenuOpen(false)} className="btn-primary  w-full text-sm">Sign Up</Link>
+      </>
+    ) : (
+      <div className="flex gap-3">
+        <Link href="/login"  className="btn-secondary px-5 py-2 text-sm">Login</Link>
+        <Link href="/signup" className="btn-primary  px-5 py-2 text-sm">Sign Up</Link>
+      </div>
+    )
+  }
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-b border-border z-50">
       <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 md:h-20 flex items-center justify-between">
 
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <LogoMark />
           <span className="text-[17px] font-extrabold text-primary tracking-tight">TACSFON Bookshop</span>
         </Link>
 
-        {/* ── Desktop nav ─────────────────────────────── */}
+        {/* Desktop */}
         <div className="hidden md:flex items-center gap-6">
-          {navLinks.map(link => (
-            <Link key={link.href} href={link.href}
-                  className="text-text-secondary hover:text-primary transition-colors min-h-[44px] flex items-center text-sm font-medium">
-              {link.label}
+          {navLinks.map(l => (
+            <Link key={l.href} href={l.href} className="text-text-secondary hover:text-primary transition-colors min-h-[44px] flex items-center text-sm font-medium">
+              {l.label}
             </Link>
           ))}
           {role === 'admin' && (
-            <Link href="/admin" className="text-text-secondary hover:text-primary transition-colors min-h-[44px] flex items-center text-sm font-medium">
-              Dashboard
-            </Link>
+            <Link href="/admin" className="text-text-secondary hover:text-primary transition-colors min-h-[44px] flex items-center text-sm font-medium">Dashboard</Link>
           )}
           {user && <NotificationBell />}
           {user && (
@@ -98,46 +151,14 @@ export default function Navbar() {
               )}
             </Link>
           )}
-          {user ? (
-            <div className="relative" ref={profileRef}>
-              <button onClick={() => setProfileOpen(p => !p)}
-                      className="flex items-center gap-2 min-h-[44px] text-sm font-medium text-text-secondary hover:text-primary transition-colors">
-                <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
-                  {initial}
-                </div>
-                <span>{firstName}</span>
-                <svg className={`w-4 h-4 transition-transform ${profileOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
-                </svg>
-              </button>
-              {profileOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl border border-border shadow-lg py-2 animate-fade-in">
-                  <Link href="/profile" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">👤 View Profile</Link>
-                  <Link href="/orders"  onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">📦 My Orders</Link>
-                  {role === 'admin' && (
-                    <Link href="/admin" onClick={() => setProfileOpen(false)} className="block px-4 py-3 text-sm text-text-primary hover:bg-primary-muted hover:text-primary transition-colors">⚙️ Admin Dashboard</Link>
-                  )}
-                  <div className="border-t border-border mt-1 pt-1">
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-sm text-accent hover:bg-red-50 transition-colors">🚪 Logout</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex gap-3">
-              <Link href="/login"  className="btn-secondary px-5 py-2 text-sm">Login</Link>
-              <Link href="/signup" className="btn-primary  px-5 py-2 text-sm">Sign Up</Link>
-            </div>
-          )}
+          <AuthSection />
         </div>
 
-        {/* ── Mobile top bar ───────────────────────────── */}
+        {/* Mobile top bar */}
         <div className="flex md:hidden items-center gap-1">
           {user && <NotificationBell />}
-
-          {/* Cart */}
           {user && (
-            <Link href="/cart" className="relative min-h-[44px] min-w-[44px] flex items-center justify-center text-text-secondary hover:text-primary transition-colors">
+            <Link href="/cart" className="relative min-h-[44px] min-w-[44px] flex items-center justify-center text-text-secondary hover:text-primary">
               <CartIcon size={20} />
               {cartCount > 0 && (
                 <span className="absolute top-1.5 right-0.5 bg-accent text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
@@ -146,30 +167,19 @@ export default function Navbar() {
               )}
             </Link>
           )}
-
-          {/* Profile avatar (logged in) — visible directly in top bar */}
           {user && (
-            <button onClick={() => setMenuOpen(!menuOpen)}
-                    className="w-9 h-9 rounded-full bg-primary-light border-2 border-primary/30
-                               flex items-center justify-center text-primary font-bold text-sm
-                               hover:border-primary transition-colors">
+            <button onClick={() => setMenuOpen(o => !o)}
+                    className="w-9 h-9 rounded-full bg-primary-light border-2 border-primary/30 flex items-center justify-center text-primary font-bold text-sm">
               {initial}
             </button>
           )}
-
-          {/* Login button (logged out) — visible directly in top bar */}
-          {!user && (
-            <Link href="/login"
-                  className="text-xs font-semibold text-primary border border-primary/40
-                             rounded-full px-3 py-1.5 hover:bg-primary-muted transition-colors">
+          {!user && !loading && (
+            <Link href="/login" className="text-xs font-semibold text-primary border border-primary/40 rounded-full px-3 py-1.5 hover:bg-primary-muted transition-colors">
               Login
             </Link>
           )}
-
-          {/* Hamburger */}
-          <button onClick={() => setMenuOpen(!menuOpen)}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary"
-                  aria-label="Toggle menu">
+          <button onClick={() => setMenuOpen(o => !o)}
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary">
             {menuOpen ? (
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M18 6 6 18M6 6l12 12"/>
@@ -183,47 +193,17 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* ── Mobile menu (hamburger) ───────────────────── */}
+      {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden absolute top-16 left-0 right-0 bg-white border-b border-border shadow-lg p-4 space-y-1 animate-fade-in">
-          {navLinks.map(link => (
-            <Link key={link.href} href={link.href} onClick={() => setMenuOpen(false)}
+          {navLinks.map(l => (
+            <Link key={l.href} href={l.href} onClick={() => setMenuOpen(false)}
                   className="block px-3 py-3 text-text-primary hover:text-primary hover:bg-primary-muted rounded-xl transition-colors min-h-[44px] flex items-center text-sm font-medium">
-              {link.label}
+              {l.label}
             </Link>
           ))}
-          {role === 'admin' && (
-            <Link href="/admin" onClick={() => setMenuOpen(false)}
-                  className="block px-3 py-3 text-text-primary hover:text-primary hover:bg-primary-muted rounded-xl transition-colors min-h-[44px] flex items-center text-sm font-medium">
-              ⚙️ Admin Dashboard
-            </Link>
-          )}
-
           <div className="pt-3 border-t border-border flex flex-col gap-2">
-            {user ? (
-              <>
-                <div className="flex items-center gap-3 px-3 py-2">
-                  <div className="w-8 h-8 rounded-full bg-primary-light border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
-                    {initial}
-                  </div>
-                  <span className="text-sm font-medium text-text-primary">Hey, {firstName}!</span>
-                </div>
-                <Link href="/profile" onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">View Profile</Link>
-                <Link href="/orders"  onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">My Orders</Link>
-                {role === 'admin' && (
-                  <Link href="/admin" onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">⚙️ Admin</Link>
-                )}
-                <button onClick={handleLogout}
-                        className="w-full min-h-[44px] flex items-center justify-center rounded-full px-6 py-3 border-2 border-accent text-accent text-sm font-semibold hover:bg-red-50 transition-all duration-200">
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login"  onClick={() => setMenuOpen(false)} className="btn-secondary w-full text-sm">Login</Link>
-                <Link href="/signup" onClick={() => setMenuOpen(false)} className="btn-primary  w-full text-sm">Sign Up</Link>
-              </>
-            )}
+            <AuthSection mobile />
           </div>
         </div>
       )}
