@@ -24,17 +24,17 @@ export async function getUserRole(userId) {
 }
 
 export async function signOut() {
-  const { error } = await supabaseBrowser.auth.signOut()
-  if (error) throw error
+  // Clear local session first — works even if server session is expired
+  await supabaseBrowser.auth.signOut({ scope: 'local' }).catch(() => {})
+  // Then attempt server-side signout (non-fatal if it fails)
+  await supabaseBrowser.auth.signOut().catch(() => {})
 }
 
 export async function signUp(email, password, fullName) {
   const { data, error } = await supabaseBrowser.auth.signUp({
     email,
     password,
-    options: {
-      data: { full_name: fullName },
-    },
+    options: { data: { full_name: fullName } },
   })
   if (error) throw error
   return data
@@ -60,12 +60,13 @@ export async function signInWithGoogle() {
       ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
       : `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
 
+  // Clear any stale local session / PKCE verifier from previous attempts
+  // before starting a fresh OAuth flow — prevents "flow state not found" errors
+  await supabaseBrowser.auth.signOut({ scope: 'local' }).catch(() => {})
+
   const { data, error } = await supabaseBrowser.auth.signInWithOAuth({
     provider: 'google',
-    options: {
-      redirectTo,
-      flowType: 'pkce',
-    },
+    options: { redirectTo },
   })
   if (error) throw error
   return data
@@ -80,13 +81,10 @@ export function getAuthErrorMessage(error) {
     return 'An account with this email already exists. Try logging in instead.'
   }
   if (msg.includes('email not confirmed')) {
-    return 'Please confirm your email before logging in. Check your inbox.'
+    return 'Please check your email and confirm your account before signing in.'
   }
-  if (msg.includes('password')) {
-    return 'Password must be at least 8 characters long.'
-  }
-  if (msg.includes('network') || msg.includes('fetch')) {
-    return 'Connection error. Please check your internet and try again.'
+  if (msg.includes('too many requests') || msg.includes('rate limit')) {
+    return 'Too many attempts. Please wait a moment and try again.'
   }
   return 'Something went wrong. Please try again.'
 }
