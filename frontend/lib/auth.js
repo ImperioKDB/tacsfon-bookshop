@@ -15,36 +15,32 @@ export async function getUser() {
 export async function getUserRole(userId) {
   if (!userId) return null
   const { data, error } = await supabaseBrowser
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single()
+    .from('profiles').select('role').eq('id', userId).single()
   if (error) return 'student'
   return data?.role ?? 'student'
 }
 
-export async function signOut() {
-  // Clear local session first — works even if server session is expired
-  await supabaseBrowser.auth.signOut({ scope: 'local' }).catch(() => {})
-  // Then attempt server-side signout (non-fatal if it fails)
-  await supabaseBrowser.auth.signOut().catch(() => {})
+/**
+ * signOut — fire and forget, never awaited.
+ * Clears the local session instantly then attempts server revocation in
+ * the background. Always returns immediately so logout never hangs even
+ * when the session is already expired or the network is slow.
+ */
+export function signOut() {
+  supabaseBrowser.auth.signOut({ scope: 'local' }).catch(() => {})
+  supabaseBrowser.auth.signOut().catch(() => {})
 }
 
 export async function signUp(email, password, fullName) {
   const { data, error } = await supabaseBrowser.auth.signUp({
-    email,
-    password,
-    options: { data: { full_name: fullName } },
+    email, password, options: { data: { full_name: fullName } },
   })
   if (error) throw error
   return data
 }
 
 export async function signInWithPassword(email, password) {
-  const { data, error } = await supabaseBrowser.auth.signInWithPassword({
-    email,
-    password,
-  })
+  const { data, error } = await supabaseBrowser.auth.signInWithPassword({ email, password })
   if (error) throw error
   return data
 }
@@ -60,13 +56,11 @@ export async function signInWithGoogle() {
       ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
       : `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
 
-  // Clear any stale local session / PKCE verifier from previous attempts
-  // before starting a fresh OAuth flow — prevents "flow state not found" errors
-  await supabaseBrowser.auth.signOut({ scope: 'local' }).catch(() => {})
+  signOut()  // clear any stale PKCE verifier before starting fresh OAuth
 
   const { data, error } = await supabaseBrowser.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo },
+    options:  { redirectTo },
   })
   if (error) throw error
   return data
@@ -74,17 +68,13 @@ export async function signInWithGoogle() {
 
 export function getAuthErrorMessage(error) {
   const msg = error?.message?.toLowerCase() ?? ''
-  if (msg.includes('invalid login credentials') || msg.includes('invalid email or password')) {
+  if (msg.includes('invalid login credentials') || msg.includes('invalid email or password'))
     return 'Invalid email or password. Please check your details and try again.'
-  }
-  if (msg.includes('email already registered') || msg.includes('user already registered')) {
+  if (msg.includes('email already registered') || msg.includes('user already registered'))
     return 'An account with this email already exists. Try logging in instead.'
-  }
-  if (msg.includes('email not confirmed')) {
+  if (msg.includes('email not confirmed'))
     return 'Please check your email and confirm your account before signing in.'
-  }
-  if (msg.includes('too many requests') || msg.includes('rate limit')) {
+  if (msg.includes('too many requests') || msg.includes('rate limit'))
     return 'Too many attempts. Please wait a moment and try again.'
-  }
   return 'Something went wrong. Please try again.'
 }
