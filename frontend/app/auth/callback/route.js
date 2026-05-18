@@ -3,13 +3,10 @@ import { NextResponse } from 'next/server'
 /**
  * GET /auth/callback
  *
- * Redirects the OAuth code to a client-side exchange page.
- *
- * Why not exchange server-side:
- * createServerClient stores the session in cookies, but createBrowserClient
- * reads from localStorage. They use different storage, so the browser never
- * finds the session the server set. By redirecting to a client-side page,
- * the exchange happens in the browser and the session lands in localStorage.
+ * Passes the OAuth code to the destination page.
+ * createBrowserClient with detectSessionInUrl:true automatically
+ * detects the code on page load and exchanges it — no manual
+ * exchangeCodeForSession call needed, no hanging promise.
  */
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url)
@@ -21,6 +18,7 @@ export async function GET(request) {
     return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
   }
 
-  const params = new URLSearchParams({ code, next: safeNext })
-  return NextResponse.redirect(`${origin}/auth/exchange?${params}`)
+  const dest = new URL(`${origin}${safeNext}`)
+  dest.searchParams.set('code', code)
+  return NextResponse.redirect(dest.toString())
 }
