@@ -1,13 +1,13 @@
 'use client'
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '@/context/AuthContext'
+import { useState, useEffect, useRef } from 'react'
+import Link                             from 'next/link'
+import { useRouter, useSearchParams }   from 'next/navigation'
+import { useAuth }                      from '@/context/AuthContext'
 import { signInWithPassword, signInWithGoogle, getAuthErrorMessage } from '@/lib/auth'
-import Input from '@/components/ui/Input'
-import Button from '@/components/ui/Button'
+import Input     from '@/components/ui/Input'
+import Button    from '@/components/ui/Button'
 import { toastError, toastSuccess } from '@/components/ui/Toast'
-import Spinner from '@/components/ui/spinner'
+import Spinner   from '@/components/ui/spinner'
 
 export default function LoginContent() {
   const [email,        setEmail]        = useState('')
@@ -15,14 +15,19 @@ export default function LoginContent() {
   const [loading,      setLoading]      = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const router       = useRouter()
-  const searchParams = useSearchParams()
+  const router        = useRouter()
+  const searchParams  = useSearchParams()
   const { user, loading: authLoading } = useAuth()
+  const hasRedirected = useRef(false)
 
   const redirect = searchParams.get('redirect') || '/products'
 
+  // Redirect if already logged in when page first loads
   useEffect(() => {
-    if (!authLoading && user) router.replace(redirect)
+    if (!authLoading && user && !hasRedirected.current) {
+      hasRedirected.current = true
+      router.replace(redirect)
+    }
   }, [user, authLoading, redirect, router])
 
   async function handleSubmit(e) {
@@ -36,6 +41,7 @@ export default function LoginContent() {
       await signInWithPassword(email, password)
       toastSuccess('Welcome back!')
       setLoading(false)
+      hasRedirected.current = true
       router.replace(redirect)
     } catch (error) {
       toastError(getAuthErrorMessage(error))
@@ -54,9 +60,7 @@ export default function LoginContent() {
 
         <div className="text-center mb-6">
           <Link href="/" className="inline-block">
-            <span className="text-2xl font-extrabold text-primary tracking-tight">
-              TACSFON Bookshop
-            </span>
+            <span className="text-2xl font-extrabold text-primary tracking-tight">TACSFON Bookshop</span>
           </Link>
         </div>
 
