@@ -21,10 +21,8 @@ export async function getUserRole(userId) {
 }
 
 /**
- * signOut — fire and forget, never awaited.
- * Clears the local session instantly then attempts server revocation in
- * the background. Always returns immediately so logout never hangs even
- * when the session is already expired or the network is slow.
+ * signOut — fire-and-forget.
+ * Clears local session instantly; server revocation runs in background.
  */
 export function signOut() {
   supabaseBrowser.auth.signOut({ scope: 'local' }).catch(() => {})
@@ -56,7 +54,11 @@ export async function signInWithGoogle() {
       ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
       : `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
 
-  signOut()  // clear any stale PKCE verifier before starting fresh OAuth
+  // DO NOT call signOut() here.
+  // signOut() is async and deletes localStorage entries including the fresh
+  // PKCE verifier that signInWithOAuth() is about to store, breaking the
+  // exchange when Google redirects back. A new signInWithOAuth() call always
+  // overwrites any stale verifier by itself — no pre-clearing needed.
 
   const { data, error } = await supabaseBrowser.auth.signInWithOAuth({
     provider: 'google',
