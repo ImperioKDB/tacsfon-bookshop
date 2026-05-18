@@ -10,6 +10,7 @@ export function getSupabaseBrowser() {
       {
         auth: {
           flowType: 'pkce',
+          detectSessionInUrl: true,
         },
       }
     )
