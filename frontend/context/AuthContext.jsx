@@ -8,7 +8,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null)
   const [role,    setRole]    = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true)  // true until first session check
 
   useEffect(() => {
     async function init() {
@@ -21,13 +21,11 @@ export function AuthProvider({ children }) {
         setUser(null)
         setRole(null)
       }
-      // Outside the try/catch — this line ALWAYS runs no matter what
-      setLoading(false)
+      setLoading(false)  // ALWAYS runs — outside try/catch
     }
 
     init()
 
-    // Keep in sync on login / logout / token refresh
     let unsubscribe = () => {}
     try {
       const { data: { subscription } } = supabaseBrowser.auth.onAuthStateChange(
