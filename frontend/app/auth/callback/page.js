@@ -3,22 +3,18 @@ import { useEffect } from 'react'
 import { supabaseBrowser } from '@/lib/supabase'
 
 /**
- * /auth/callback  — Google OAuth callback handler
+ * /auth/callback — Google OAuth callback (client-side, per spec)
  *
- * Spec: /auth/callback/page.js  (client-side, not a server route)
- *
- * Why client-side:
- * The PKCE code verifier is stored in browser localStorage by signInWithOAuth().
- * A server route.js cannot access localStorage, so exchangeCodeForSession()
- * always fails server-side. Running it here in the browser gives full access
- * to the verifier, completing the exchange correctly.
+ * detectSessionInUrl is false in supabase.js so only this page exchanges
+ * the code — no double-exchange conflict.
  *
  * Flow:
- *   Google redirect → /auth/callback?code=...
- *   → this page mounts in the browser
- *   → exchangeCodeForSession(code) reads verifier from localStorage ✓
- *   → session stored → hard redirect to destination
- *   → AuthContext re-reads session on fresh page load ✓
+ *   Google → /auth/callback?code=...
+ *   → page mounts in browser
+ *   → exchangeCodeForSession(code) reads PKCE verifier from cookie storage
+ *   → session stored in cookies (readable by middleware)
+ *   → hard redirect to destination
+ *   → AuthContext picks up session via getSession()
  */
 export default function AuthCallback() {
   useEffect(() => {
@@ -27,26 +23,19 @@ export default function AuthCallback() {
     const next     = params.get('next') || '/products'
     const safeNext = next.startsWith('/') ? next : '/products'
 
-    function fail() {
-      window.location.href = '/login?error=auth_callback_failed'
-    }
+    function fail() { window.location.href = '/login?error=auth_callback_failed' }
 
     if (!code) { fail(); return }
 
-    // 15-second failsafe in case of network hang
     const timer = setTimeout(fail, 15_000)
 
     supabaseBrowser.auth
       .exchangeCodeForSession(code)
       .then(({ error }) => {
         clearTimeout(timer)
-        // Hard redirect forces AuthContext to re-read the session from storage
         window.location.href = error ? '/login?error=auth_callback_failed' : safeNext
       })
-      .catch(() => {
-        clearTimeout(timer)
-        fail()
-      })
+      .catch(() => { clearTimeout(timer); fail() })
   }, [])
 
   return (
