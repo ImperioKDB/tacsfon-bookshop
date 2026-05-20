@@ -21,8 +21,12 @@ export async function getUserRole(userId) {
 }
 
 /**
- * signOut — fire-and-forget.
- * Clears local session instantly; server revocation runs in background.
+ * signOut — synchronous, fire-and-forget.
+ *
+ * NOT async on purpose. The server-side revoke (signOut without scope) makes
+ * a network request that can hang on expired sessions. Awaiting it would
+ * block window.location.href in handleLogout and break the logout button.
+ * Local session is cleared instantly; server revocation runs in background.
  */
 export function signOut() {
   supabaseBrowser.auth.signOut({ scope: 'local' }).catch(() => {})
@@ -38,7 +42,9 @@ export async function signUp(email, password, fullName) {
 }
 
 export async function signInWithPassword(email, password) {
-  const { data, error } = await supabaseBrowser.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabaseBrowser.auth.signInWithPassword({
+    email, password,
+  })
   if (error) throw error
   return data
 }
@@ -54,11 +60,8 @@ export async function signInWithGoogle() {
       ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
       : `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(currentRedirect)}`
 
-  // DO NOT call signOut() here.
-  // signOut() is async and deletes localStorage entries including the fresh
-  // PKCE verifier that signInWithOAuth() is about to store, breaking the
-  // exchange when Google redirects back. A new signInWithOAuth() call always
-  // overwrites any stale verifier by itself — no pre-clearing needed.
+  // DO NOT call signOut() here — it deletes the PKCE verifier that
+  // signInWithOAuth() is about to store, breaking the exchange on return.
 
   const { data, error } = await supabaseBrowser.auth.signInWithOAuth({
     provider: 'google',
