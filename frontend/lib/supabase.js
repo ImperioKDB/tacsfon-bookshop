@@ -9,8 +9,10 @@ export function getSupabaseBrowser() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       {
         auth: {
-          flowType: 'pkce',
-          detectSessionInUrl: true,
+          // MUST be false — if true, supabaseBrowser auto-exchanges the OAuth
+          // code on every page load, consuming it before auth/callback/page.js
+          // can do it, causing "flow state not found" and a redirect to /login.
+          detectSessionInUrl: false,
         },
       }
     )
