@@ -10,6 +10,6 @@ An e-commerce web app for TACSFON's church bookshop, allowing students to browse
 ## Features
 - Browse stationery products by category
 - Cart & checkout with delivery address
-- Paystack payment integration
+- Payment receiving 
 - Order tracking
 - Staff dashboard for inventory & order management
