@@ -1,9 +1,7 @@
 // lib/api.js
-// ─────────────────────────────────────────────────────────────────────────────
 // Single source of truth for all backend API calls.
-// All paths are relative to NEXT_PUBLIC_API_URL (the Express backend on Render).
+// All paths are relative to NEXT_PUBLIC_API_URL (Express backend on Render).
 // Never use raw fetch in components — always call through this file.
-// ─────────────────────────────────────────────────────────────────────────────
 
 import { createBrowserClient } from '@supabase/ssr'
 
@@ -14,12 +12,43 @@ const supabase = createBrowserClient(
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
-// ── Internal HTTP helpers ────────────────────────────────────────────────────
+// How long to wait for Render before giving up.
+// 8 s covers a warm-but-slow response without blocking the UI forever.
+// Cold starts are handled by the keep-alive workflow — not by waiting longer here.
+const TIMEOUT_MS = 8000
+
+// ── Internal fetch wrapper ────────────────────────────────────────────────────
+
+/**
+ * fetchWithTimeout — wraps fetch with an AbortController timeout.
+ * Throws a plain Error with message 'TIMEOUT' on expiry so callers
+ * can distinguish timeout from server error if needed.
+ */
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal })
+    return res
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const timeout = new Error('TIMEOUT')
+      timeout.status = 408
+      throw timeout
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
 
 async function get(path, params = {}) {
   const url = new URL(`${BASE_URL}${path}`)
   Object.entries(params).forEach(([k, v]) => v !== undefined && url.searchParams.set(k, v))
-  const res = await fetch(url.toString())
+  const res = await fetchWithTimeout(url.toString())
   if (!res.ok) throw await buildError(res)
   return res.json().then(r => r.data)
 }
@@ -28,7 +57,7 @@ async function authGet(path, params = {}) {
   const token = await getToken()
   const url = new URL(`${BASE_URL}${path}`)
   Object.entries(params).forEach(([k, v]) => v !== undefined && url.searchParams.set(k, v))
-  const res = await fetch(url.toString(), {
+  const res = await fetchWithTimeout(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw await buildError(res)
@@ -37,10 +66,10 @@ async function authGet(path, params = {}) {
 
 async function authPost(path, body) {
   const token = await getToken()
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
+  const res = await fetchWithTimeout(`${BASE_URL}${path}`, {
+    method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
+    body:    JSON.stringify(body),
   })
   if (!res.ok) throw await buildError(res)
   return res.json().then(r => r.data)
@@ -48,10 +77,10 @@ async function authPost(path, body) {
 
 async function authPatch(path, body) {
   const token = await getToken()
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'PATCH',
+  const res = await fetchWithTimeout(`${BASE_URL}${path}`, {
+    method:  'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
+    body:    JSON.stringify(body),
   })
   if (!res.ok) throw await buildError(res)
   return res.json().then(r => r.data)
@@ -59,24 +88,40 @@ async function authPatch(path, body) {
 
 async function authDelete(path) {
   const token = await getToken()
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'DELETE',
+  const res = await fetchWithTimeout(`${BASE_URL}${path}`, {
+    method:  'DELETE',
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw await buildError(res)
   return res.json().then(r => r.data)
 }
 
-// Multipart form upload — no Content-Type header (browser sets it with boundary)
+// Multipart form upload — no Content-Type header (browser sets it with boundary).
+// Uses a longer timeout (30 s) for file uploads.
 async function authUploadForm(path, formData) {
   const token = await getToken()
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  })
-  if (!res.ok) throw await buildError(res)
-  return res.json().then(r => r.data)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30_000)
+
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body:    formData,
+      signal:  controller.signal,
+    })
+    if (!res.ok) throw await buildError(res)
+    return res.json().then(r => r.data)
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const timeout = new Error('TIMEOUT')
+      timeout.status = 408
+      throw timeout
+    }
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 async function getToken() {
@@ -89,99 +134,72 @@ async function buildError(res) {
   const body = await res.json().catch(() => ({}))
   const err = new Error(body.error?.message || 'Request failed')
   err.status = res.status
-  err.code = body.error?.code || null
+  err.code   = body.error?.code || null
   return err
 }
 
-// ── API namespaces ───────────────────────────────────────────────────────────
+// ── API namespaces ────────────────────────────────────────────────────────────
 
-// Public product catalog
-// Backend: GET /api/products, GET /api/products/:id
-// Supported params: page, limit, category_id, search
-// NOTE: `featured` param is NOT supported by backend — use `limit: 6` for homepage
 export const productsApi = {
   getAll:  (params) => get('/api/products', params),
   getById: (id)     => get(`/api/products/${id}`),
 }
 
-// Public categories — no auth required
-// Backend: GET /api/categories
 export const categoriesApi = {
   getAll: () => get('/api/categories'),
 }
 
-// Cart — all routes require auth
-// Backend: GET /api/cart, POST /api/cart/items,
-//          PATCH /api/cart/items/:itemId, DELETE /api/cart/items/:itemId, DELETE /api/cart
 export const cartApi = {
-  get:        ()              => authGet('/api/cart'),
-  addItem:    (body)          => authPost('/api/cart/items', body),
-  // body: { quantity: number }
-  updateItem: (itemId, body)  => authPatch(`/api/cart/items/${itemId}`, body),
-  removeItem: (itemId)        => authDelete(`/api/cart/items/${itemId}`),
-  clear:      ()              => authDelete('/api/cart'),
+  get:        ()             => authGet('/api/cart'),
+  addItem:    (body)         => authPost('/api/cart/items', body),
+  updateItem: (itemId, body) => authPatch(`/api/cart/items/${itemId}`, body),
+  removeItem: (itemId)       => authDelete(`/api/cart/items/${itemId}`),
+  clear:      ()             => authDelete('/api/cart'),
 }
 
-// Orders — student-facing
-// Backend: GET /api/orders, GET /api/orders/:id, PATCH /api/orders/:id/received
 export const ordersApi = {
   getAll:       (params) => authGet('/api/orders', params),
   getById:      (id)     => authGet(`/api/orders/${id}`),
   markReceived: (id)     => authPatch(`/api/orders/${id}/received`, {}),
 }
 
-// Payment
-// initiate  → POST /api/payment/initiate  — body: { customer_name, phone, delivery_address, notes? }
-//             returns { ref_id, total_amount, account_number, bank_name, account_name }
-// verify    → POST /api/payment/verify    — polls until order confirmed; returns { order_id, ref_id, share_token } or { status: 'pending', ref_id }
-// confirm   → POST /api/payment/admin/confirm (admin only) — confirms payment, creates order
 export const paymentApi = {
-  initiate: (body)    => authPost('/api/payment/initiate', body),  // FIX: was `() => authPost(..., {})` — payload was discarded
-  verify:   (ref_id)  => authPost('/api/payment/verify', { ref_id }),
-  confirm:  (ref_id)  => authPost('/api/payment/admin/confirm', { ref_id }),
+  initiate: (body)   => authPost('/api/payment/initiate', body),
+  verify:   (ref_id) => authPost('/api/payment/verify', { ref_id }),
+  confirm:  (ref_id) => authPost('/api/payment/admin/confirm', { ref_id }),
 }
 
-// Notifications — all require auth
-// Backend: GET /api/notifications, PATCH /api/notifications/:id/read,
-//          PATCH /api/notifications/read-all
 export const notificationsApi = {
   getAll:      (params) => authGet('/api/notifications', params),
   markRead:    (id)     => authPatch(`/api/notifications/${id}/read`, {}),
   markAllRead: ()       => authPatch('/api/notifications/read-all', {}),
 }
 
-// Receipts
-// Backend: GET /api/receipts/share/:token (public), GET /api/receipts/:orderId (auth)
 export const receiptsApi = {
   getByToken:   (token)   => get(`/api/receipts/share/${token}`),
   getByOrderId: (orderId) => authGet(`/api/receipts/${orderId}`),
 }
 
-// Auth — profile
-// Backend: GET /api/auth/me, POST /api/auth/logout
 export const authApi = {
   getMe:  () => authGet('/api/auth/me'),
   logout: () => authPost('/api/auth/logout', {}),
 }
 
-// Admin
-// Backend: all /api/admin/* routes require auth + admin role
 export const adminApi = {
   // Orders
   getOrders:     (status) => authGet('/api/admin/orders', status ? { status } : {}),
   getOrderById:  (id)     => authGet(`/api/admin/orders/${id}`),
   dispatchOrder: (id)     => authPatch(`/api/admin/orders/${id}/dispatch`, {}),
   createWalkin:  (body)   => authPost('/api/admin/orders/walkin', body),
-  // body: { customer_name, phone, notes, items: [{ product_id, quantity }] }
 
-  // Products — uses public route for reads, admin routes for writes
+  // Products
   getProducts:   (params)       => authGet('/api/products', params),
   createProduct: (body)         => authPost('/api/admin/products', body),
   updateProduct: (id, body)     => authPatch(`/api/admin/products/${id}`, body),
   deleteProduct: (id)           => authDelete(`/api/admin/products/${id}`),
   uploadImage:   (id, formData) => authUploadForm(`/api/admin/products/${id}/image`, formData),
 
-  // Categories — uses public route for reads
+  // Categories
   getCategories:  ()     => get('/api/categories'),
   createCategory: (body) => authPost('/api/admin/categories', body),
   deleteCategory: (id)   => authDelete(`/api/admin/categories/${id}`),
@@ -198,6 +216,6 @@ export const adminApi = {
   // Receipts
   getReceipts: (params) => authGet('/api/admin/receipts', params),
 
-  // Pending payments (manual bank transfer confirmation)
+  // Pending payments
   getPendingPayments: () => authGet('/api/admin/pending-payments'),
 }
