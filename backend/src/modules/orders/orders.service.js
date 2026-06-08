@@ -1,16 +1,15 @@
 'use strict';
 
-const supabase    = require('../../config/supabase');
-const { generate } = require('../../utils/refIdGenerator');
-const auditLog    = require('../../utils/auditLog');
+const supabase     = require('../../config/supabase');
+const auditLog     = require('../../utils/auditLog');
 
-/* ── helpers ── */
+/* ── DB error helper — logs real Supabase detail to Render logs ── */
 function dbErr(label, error) {
   console.error(
     `[DB ERROR] ${label} |`,
-    'msg:',    error?.message,
-    '| code:', error?.code,
-    '| hint:', error?.hint,
+    'msg:',     error?.message,
+    '| code:',  error?.code,
+    '| hint:',  error?.hint,
     '| detail:', error?.details
   );
   throw new Error('DATABASE_ERROR');
@@ -117,9 +116,6 @@ exports.dispatchOrder = async (orderId, adminId) => {
 
 /* ── Admin: create walk-in order ── */
 exports.createWalkinOrder = async ({ customer_name, phone, items, notes }, adminId) => {
-  const refId = await generate();
-
-  // Server-side total recalculation — never trust client price
   const productIds = items.map(i => i.product_id);
   const { data: products, error: prodErr } = await supabase
     .from('products')
@@ -139,11 +135,9 @@ exports.createWalkinOrder = async ({ customer_name, phone, items, notes }, admin
     total += p.price * item.quantity;
   }
 
-  // Insert order
   const { data: order, error: orderErr } = await supabase
     .from('orders')
     .insert({
-      ref_id:       refId,
       customer_name,
       phone,
       notes,
@@ -157,7 +151,6 @@ exports.createWalkinOrder = async ({ customer_name, phone, items, notes }, admin
 
   if (orderErr) dbErr('createWalkinOrder:insertOrder', orderErr);
 
-  // Insert order items
   const orderItems = items.map(item => ({
     order_id:   order.id,
     product_id: item.product_id,
@@ -168,6 +161,6 @@ exports.createWalkinOrder = async ({ customer_name, phone, items, notes }, admin
   const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
   if (itemsErr) dbErr('createWalkinOrder:insertItems', itemsErr);
 
-  await auditLog(adminId, 'CREATE_WALKIN_ORDER', { order_id: order.id, ref_id: refId });
+  await auditLog(adminId, 'CREATE_WALKIN_ORDER', { order_id: order.id });
   return order;
 };
