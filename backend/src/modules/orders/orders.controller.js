@@ -58,8 +58,8 @@ exports.createWalkinOrder = async (req, res, next) => {
     const data = await svc.createWalkinOrder(req.body, req.user.id);
     success(res, 201, data, 'Walk-in order created');
   } catch (err) {
-    const knownErrors = ['PRODUCT_NOT_FOUND', 'PRODUCT_UNAVAILABLE', 'INSUFFICIENT_STOCK'];
-    if (knownErrors.includes(err.message))
+    const known = ['PRODUCT_NOT_FOUND', 'PRODUCT_UNAVAILABLE', 'INSUFFICIENT_STOCK'];
+    if (known.includes(err.message))
       return error(res, 400, err.message, err.message.replace(/_/g, ' ').toLowerCase());
     next(err);
   }
