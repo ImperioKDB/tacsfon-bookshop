@@ -1,0 +1,17 @@
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self' https://brightng.vercel.app https://*.vercel.app"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "ALLOW-FROM https://brightng.vercel.app"
+        }
+      ]
+    }
+  ]
+}
